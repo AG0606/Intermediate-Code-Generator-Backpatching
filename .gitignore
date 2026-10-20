@@ -18,20 +18,21 @@ parser.tab.h
 y.tab.c
 y.tab.h
 
-# Temporary / Scratch scripts and artifacts
-batch_*.json
-test_batch.json
+# Excluded scripts, presentations, reports, and assets
+backup_assets/
+*.bat
+*.ps1
+*.pdf
+*.pptx
+*.html
+*.dot
+*.json
 *.png
-create_presentation.py
-build_full_gslides_deck.py
-update_icg_presentation.py
-ICG_Final_Review_backup.pptx
-ICG_final_pdf.pdf
-compiler_Backpatching_Presentation-4-removed-qa.pdf
-compiler_Backpatching_Presentation_100_Final.pptx
-cfg.dot
-cfg_optimized.dot
-cfg_optimized.html
+update_*.py
+create_*.py
+build_*.py
+PROGRESS_REPORT.*
+PROJECT_REPORT.*
 
 # Python cache
 __pycache__/
