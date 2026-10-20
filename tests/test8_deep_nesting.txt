@@ -1,0 +1,11 @@
+if (a > 0) {
+    while (b < 10) {
+        for (i = 0; i < 5; i = i + 1) {
+            if (i == 2) break;
+            x = x + i;
+        }
+        b = b + 1;
+    }
+} else {
+    y = y - 1;
+}

@@ -1,0 +1,13 @@
+switch (op) {
+    case 1:
+        res = a + b;
+        break;
+    case 2:
+        res = a - b;
+        break;
+    case 3:
+        res = a * b;
+        break;
+    default:
+        res = 0;
+}

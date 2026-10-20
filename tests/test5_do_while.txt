@@ -1,0 +1,5 @@
+do {
+    count = count + 1;
+    if (count == 3) continue;
+    if (count == 7) break;
+} while (count < 10);

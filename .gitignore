@@ -1,0 +1,42 @@
+# Compiled binaries and objects
+icg
+icg.exe
+*.o
+*.obj
+*.exe
+*.out
+
+# Flex and Bison generated files
+src/lex.yy.c
+src/parser.tab.c
+src/parser.tab.h
+src/y.tab.c
+src/y.tab.h
+lex.yy.c
+parser.tab.c
+parser.tab.h
+y.tab.c
+y.tab.h
+
+# Temporary / Scratch scripts and artifacts
+batch_*.json
+test_batch.json
+*.png
+create_presentation.py
+build_full_gslides_deck.py
+update_icg_presentation.py
+ICG_Final_Review_backup.pptx
+ICG_final_pdf.pdf
+compiler_Backpatching_Presentation-4-removed-qa.pdf
+compiler_Backpatching_Presentation_100_Final.pptx
+cfg.dot
+cfg_optimized.dot
+cfg_optimized.html
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
