@@ -1,0 +1,9 @@
+int main() {
+    int a = 10;
+    int b = ;
+    int c = 20;
+    if (a > ) {
+        c = 30;
+    }
+    return 0;
+}

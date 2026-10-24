@@ -151,6 +151,17 @@ TESTS = [
             "x_s5",
             "return result"
         ]
+    },
+    {
+        "name": "Multiple Syntax Errors & Semicolon Recovery",
+        "file": "tests/test14_syntax_errors.txt",
+        "args": [],
+        "expected_exit_code": 1,
+        "expected_substrings": [
+            "[SYNTAX ERROR]",
+            "syntax error near ';'",
+            "Compilation terminated with"
+        ]
     }
 ]
 
