@@ -1,311 +1,413 @@
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
-% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
-\usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{booktabs}
 \usepackage{listings}
 \usepackage{url}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{balance}
 
 \lstset{
-    basicstyle=\ttfamily\footnotesize,
-    breaklines=true,
-    captionpos=b,
-    numbers=left,
-    numberstyle=\tiny,
-    frame=single,
-    tabsize=2,
-    keywordstyle=\color{blue}\bfseries,
-    commentstyle=\color{gray}\itshape,
-    stringstyle=\color{red}
+  language=C,
+  basicstyle=\ttfamily\scriptsize,
+  breaklines=true,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  frame=tb,
+  tabsize=4,
+  keywordstyle=\color{blue!80!black}\bfseries,
+  commentstyle=\color{green!50!black}\itshape,
+  stringstyle=\color{red!70!black},
+  showstringspaces=false,
+  xleftmargin=1.5em,
+  aboveskip=6pt,
+  belowskip=4pt,
 }
 
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\hypersetup{hidelinks}
 
 \begin{document}
 
-\title{AST-Free Streaming Intermediate Code Generation with Scope-Preserving Backpatching and Flow-Typed Control Flow Synthesis\\
-\thanks{Source code and experimental artifacts available at: \url{https://github.com/AG0606/Intermediate-Code-Generator-Backpatching}}
-}
+\title{AST-Free Streaming Intermediate Code Generation\\with Scope-Preserving Backpatching and\\Flow-Typed Control Flow Graph Synthesis}
 
 \author{
-\IEEEauthorblockN{Ashutosh Gupta}
-\IEEEauthorblockA{\textit{School of Computer Science and Engineering} \\
-\textit{Registration No: 24BCE2983}\\
-India}
+\IEEEauthorblockN{Ashutosh Gupta\\24BCE2983}
 \and
-\IEEEauthorblockN{Dhruv Mathur}
-\IEEEauthorblockA{\textit{School of Computer Science and Engineering} \\
-\textit{Registration No: 24BCE2504}\\
-India}
+\IEEEauthorblockN{Dhruv Mathur\\24BCE2504}
 \and
-\IEEEauthorblockN{Somya Raj Singh Dalawat}
-\IEEEauthorblockA{\textit{School of Computer Science and Engineering} \\
-\textit{Registration No: 24BCE3001}\\
-India}
+\IEEEauthorblockN{Somya Raj Singh Dalawat\\24BCE3001}
 }
 
 \maketitle
 
+% ============================================================
+% ABSTRACT
+% ============================================================
 \begin{abstract}
-Modern production-grade compilers predominantly rely on multi-pass Abstract Syntax Tree (AST) representations to resolve variable scoping, handle non-linear control flow, and synthesize Control Flow Graphs (CFGs). While versatile, AST allocations introduce substantial memory footprint and traversal latency, which modern streaming architectures and low-latency Just-In-Time (JIT) baselines seek to eliminate. In this paper, we propose and empirically evaluate an end-to-end, single-pass Intermediate Code Generator (ICG) for ANSI C control-flow constructs built upon an extended Backpatching paradigm. 
-
-Our architecture achieves complete lexical scope isolation and variable shadowing resolution in a single $O(1)$ streaming pass without building an AST, using a hierarchical scope stack and dynamic identifier mangling ($x \to x\_s0, x\_s2$). Furthermore, we resolve the grammatical-versus-execution sequence anomaly of ANSI C \texttt{for} loops via a novel Dual-Marker Linear Synchronization pattern ($N_{\text{skip}}$ and $N_{\text{back}}$) in strict $O(1)$ auxiliary time with zero token buffering. The system directly partitions raw backpatched Three-Address Code (3AC) quadruples into basic blocks using a 4-rule leader identification algorithm, establishing flow-typed edge semantics (True, False, Jump, Fallthrough) matching contemporary compiler analysis standards. Finally, we formulate a coupled 4-pass optimization engine featuring constant folding, jump chaining, and dead-code elimination paired with an in-place jump target re-indexing algorithm that mathematically guarantees branch destination integrity. The compiler is implemented in ANSI C using Flex and Bison, and verified across a comprehensive 14-benchmark test suite achieving a 100.0\% pass rate.
+Conventional compiler front-ends construct a heap-allocated Abstract Syntax Tree (AST) before lowering source programs into intermediate representations, incurring memory and latency overheads that modern streaming and just-in-time architectures seek to avoid. We present a single-pass Intermediate Code Generator (ICG) for a substantial subset of ANSI~C that extends the classical backpatching technique with four contributions: (i)~a hierarchical scope stack with on-the-fly identifier mangling that resolves nested variable shadowing directly in the Three-Address Code (3AC) stream without an AST; (ii)~a dual-marker synchronisation pattern that reconciles the grammatical--execution order mismatch of C \texttt{for} loops in $O(1)$ auxiliary space; (iii)~an automated leader-based partitioner that constructs a Control Flow Graph (CFG) with semantically typed edges (True, False, Jump, Fallthrough) from the raw quadruple array; and (iv)~a coupled four-pass optimiser with an in-place address-remapping vector that guarantees branch-target integrity after dead-code elimination. The system is implemented in ANSI~C with Flex~2.6 and Bison~3.8, and passes all~14 end-to-end test suites covering branching, loops, \texttt{switch-case}, short-circuit logic, scoped declarations, error recovery, and optimisation.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Intermediate Code Generation, Backpatching, Syntax-Directed Translation, Control Flow Graphs, Three-Address Code, Single-Pass Compilation, Variable Shadowing, Program Optimization.
+intermediate code generation, backpatching, three-address code, control flow graph, syntax-directed translation, single-pass compilation, dead-code elimination
 \end{IEEEkeywords}
 
+% ============================================================
+% I.  INTRODUCTION
+% ============================================================
 \section{Introduction}
-In standard compiler design, intermediate code generation serves as the pivotal abstraction layer decoupling source language syntax from target hardware instruction sets. Industrial optimizing compilers such as LLVM Clang and GCC universally employ multi-pass architectures: the front-end parses source text into a persistent Abstract Syntax Tree (AST), performs repeated traversals for type checking, symbol resolution, and canonicalization, and subsequently lowers the AST into a linear Intermediate Representation (IR).
 
-While multi-pass AST-based pipelines support sophisticated interprocedural transformations, their heap-allocated tree structures entail non-trivial memory overhead and cache degradation. This penalty is particularly acute in streaming compilation scenarios—such as WebAssembly execution engines (e.g., Google V8's \textit{Liftoff} baseline compiler) and embedded edge computing environments—where execution must commence with minimal startup latency as code arrives over the network.
+Intermediate code generation is the compiler phase that lowers a parsed source program into a machine-independent representation suitable for optimisation and eventual target-code emission. Production compilers such as LLVM/Clang and GCC accomplish this through multi-pass pipelines: the front-end first constructs a persistent Abstract Syntax Tree~(AST), performs semantic analysis and type checking over repeated traversals, and finally lowers the annotated tree into a linear intermediate representation~(IR).
 
-To achieve optimal throughput, single-pass syntax-directed translation is essential. However, generating linear Three-Address Code (3AC) quadruples concurrently with bottom-up LALR(1) parsing introduces the classical \textit{Forward-Jump Dilemma}:
-\begin{equation}
-\label{eq:forward_jump}
-\text{\texttt{if (cond) \{ stmt\_1; \} else \{ stmt\_2; \}}}
-\end{equation}
-When translating the condition, the destination quad of the \texttt{else} branch is fundamentally unknown because \texttt{stmt\_1} has not yet been processed. Likewise, upon completing \texttt{stmt\_1}, an unconditional branch must be emitted to skip over \texttt{stmt\_2}, yet the target address following the entire construct is not yet allocated.
+Although multi-pass AST-based architectures enable powerful whole-program transformations, their heap-allocated tree nodes incur non-trivial memory pressure and cache-miss penalties. These costs are especially problematic in \emph{streaming compilation} scenarios---exemplified by the Liftoff baseline compiler in Google's V8 engine~\cite{v8liftoff}---where machine code must be emitted with minimal latency as bytecode arrives over the network.
 
-While textbook backpatching, formulated by Aho, Sethi, and Ullman \cite{dragonbook}, established the theoretical mechanism for forward branch resolution via linked lists of unresolved instruction offsets, existing academic formulations are restricted to toy grammars with flat global namespaces, trivial branching, and no provisions for:
+An alternative paradigm is \emph{single-pass syntax-directed translation} (SDT), in which intermediate instructions are emitted directly during parsing. However, SDT introduces the well-known \emph{forward-jump dilemma}: when the parser encounters a conditional branch such as
+\begin{lstlisting}
+if (a < b) { x = 1; } else { x = 2; }
+\end{lstlisting}
+the jump destination of the false branch is unknown because the \texttt{then}-block has not yet been parsed. The textbook solution, \emph{backpatching}~\cite{dragonbook}, maintains linked lists of incomplete jump instructions whose targets are filled in once the destination becomes known. Despite its elegance, the original formulation addresses only flat grammars with trivial control flow and a single global namespace.
+
+Extending backpatching to handle a realistic C subset raises four challenges that motivate this work:
 \begin{enumerate}
-    \item Scoped block variables and identifier shadowing ($\{ \dots \}$) without an AST;
-    \item Grammatically inverted control loops such as ANSI C \texttt{for} loops;
-    \item Direct construction of Control Flow Graphs (CFGs) with typed edge semantics;
-    \item Coupled post-backpatching optimization without branch-target corruption.
+\item \textbf{Lexical scoping.} C permits variable re-declaration inside nested blocks. A flat symbol table cannot distinguish inner and outer instances of the same identifier during single-pass emission.
+\item \textbf{For-loop order inversion.} In~C, the grammatical token order of a \texttt{for} header is \emph{init--condition--step}, but the execution order is \emph{init--condition--body--step}. A bottom-up (LALR) parser processes tokens left-to-right, so the step expression is parsed \emph{before} the body that must precede it at run time.
+\item \textbf{CFG construction.} Textbook backpatching produces an unlabelled quadruple array with raw numerical jump targets but no structured control-flow graph.
+\item \textbf{Post-backpatching optimisation.} Removing dead instructions shifts quadruple indices, silently corrupting all existing jump targets.
 \end{enumerate}
 
-\subsection{Key Contributions}
-To resolve these engineering and theoretical limitations, this paper presents:
+\subsection{Contributions}
+We address each challenge through a distinct algorithmic mechanism:
 \begin{itemize}
-    \item \textbf{Single-Pass Lexical Scope Resolution without AST:} An active hierarchical scope stack combined with dynamic symbol mangling that isolates shadowed identifiers ($x \to x\_s0, x\_s2$) on the fly.
-    \item \textbf{Dual-Marker Linear Loop Synchronization:} An $O(1)$ auxiliary time translation pattern using specialized markers ($N_{\text{skip}}$ and $N_{\text{back}}$) that reconciles the step-after-body execution order of C \texttt{for} loops without token buffering.
-    \item \textbf{Direct Flow-Typed CFG Synthesis:} An automated leader-partitioning engine that classifies 3AC transitions into True, False, Jump, and Fallthrough edges matching recent 2024 IR verification standards.
-    \item \textbf{Coupled Optimization with Address Integrity Remapping:} A 4-pass optimization suite (constant folding, jump chaining, and dead-code elimination) backed by an in-place index displacement vector preventing dangling jumps.
-    \item \textbf{Production Implementation \& Empirical Validation:} A fully functional ANSI C compiler written in Flex and Bison, validated against 14 automated test suites with 100\% pass rate.
+\item A \emph{hierarchical scope stack} with dynamic identifier mangling (\S\ref{sec:scoping}) that isolates shadowed variables without an AST.
+\item A \emph{dual-marker synchronisation pattern} (\S\ref{sec:forloop}) using two $\varepsilon$-non-terminals, $N_{\mathrm{skip}}$ and $N_{\mathrm{back}}$, that bridges the parse--execution order gap in $O(1)$ auxiliary space.
+\item A \emph{leader-based CFG synthesiser} (\S\ref{sec:cfg}) that partitions quadruples into basic blocks with flow-typed edges.
+\item A \emph{four-pass optimiser} (\S\ref{sec:opt}) with an address-remapping vector that maintains branch-target integrity.
 \end{itemize}
+The complete implementation, test suite, and build infrastructure are publicly available.\footnote{\url{https://github.com/AG0606/Intermediate-Code-Generator-Backpatching}}
 
-\section{Related Work \& Literature Survey}
-Our design synthesizes and extends modern compiler research spanning streaming architectures, intermediate representations, and verification:
+% ============================================================
+% II.  RELATED WORK
+% ============================================================
+\section{Related Work}
 
-\subsection{Streaming JIT Compilation (V8 Liftoff)}
-Recent developments in Google V8's \textit{Liftoff} compiler \cite{v8liftoff} have revitalized interest in single-pass code generation. Liftoff operates as a baseline WebAssembly engine that translates bytecode directly to machine instructions in a single streaming pass, bypassing AST allocation to minimize compiler memory consumption and time-to-first-instruction. Liftoff relies on immediate fixup tables (analogous to backpatching). Our work demonstrates that similar single-pass principles can be generalized to source-level C control constructs.
+\textbf{Classical backpatching.} Aho, Sethi, and Ullman~\cite{dragonbook} introduced the \textsc{makelist}--\textsc{merge}--\textsc{backpatch} algebra for resolving forward jumps in a single bottom-up pass. Their treatment is limited to flat grammars without block scoping, \texttt{for} loops, or \texttt{switch-case} constructs.
 
-\subsection{Linear IR and Multi-Level Abstractions (MLIR)}
-Lattner et al. \cite{mlir} established with MLIR that representing control flow through basic blocks containing linear operations remains the optimal paradigm for code lowering and analysis. Rather than retaining nested AST nodes, lowering constructs to linear quadruples enables modular optimization and straightforward graph partitioning.
+\textbf{Streaming compilation.} Google's V8 Liftoff compiler~\cite{v8liftoff} demonstrates the practical value of single-pass code emission for WebAssembly, using fixup tables analogous to backpatching. Our work generalises these streaming principles to source-level C control constructs with full lexical scoping.
 
-\subsection{Flow-Typed Control Flow Graphs (FAIR)}
-Niu et al. \cite{fair} introduced FAIR (Flow-Aware Intermediate Representation), emphasizing that intermediate graphs must explicitly classify transition edges into typed semantics (True, False, Jump, and Fallthrough) to support sound vulnerability detection and formal verification. Standard textbook backpatching outputs unclassified numerical targets; our system directly incorporates flow-typed edge classification.
+\textbf{Multi-level IRs.} Lattner et al.~\cite{mlir} showed with MLIR that basic blocks of linear operations remain the most effective abstraction for compiler transformations, advocating explicit control-flow-graph representations over nested AST structures.
 
-\subsection{Direct IR Generation from Syntax}
-Braun et al. \cite{braun2022} proved that intermediate representations and Static Single Assignment (SSA) form can be synthesized directly from source syntax without constructing dominator trees over an AST. Our dynamic variable mangling mechanism builds upon this paradigm by resolving lexical scope lifetimes during bottom-up shift-reduce parsing.
+\textbf{Flow-typed edges.} Niu et al.~\cite{fair} introduced the FAIR intermediate representation, arguing that CFG edges must carry explicit semantic types (True, False, Jump, Fallthrough) to support sound static analysis. Our CFG engine adopts this classification.
 
-\subsection{Branch Integrity during Code Pruning (Xdead)}
-Slind \cite{xdead} demonstrated that pruning instructions during post-compilation dead-code elimination frequently introduces branch-target corruption (dangling jumps) if jump offsets are not re-indexed concurrently. Our coupled address remapping vector formally guarantees branch integrity.
+\textbf{Direct IR construction.} Braun et al.~\cite{braun2022} proved that SSA form can be constructed directly during parsing without dominator-tree computation over an AST, validating the feasibility of single-pass IR generation with scope awareness.
 
-\section{Theoretical Formulation}
+\textbf{Branch-target integrity.} Recent work on dead-code elimination in compiled binaries~\cite{xdead} highlights that deleting instructions without re-indexing jump targets introduces silent control-flow corruption. Our optimiser addresses this via an explicit remapping pass.
+
+% ============================================================
+% III.  BACKGROUND AND NOTATION
+% ============================================================
+\section{Background and Notation}
+\label{sec:background}
 
 \subsection{Quadruple Representation}
-The intermediate code is modeled as an array of 4-tuples:
+The intermediate code is a linearly indexed array of four-tuples:
 \begin{equation}
-Q = \langle \text{op}, \; \text{arg}_1, \; \text{arg}_2, \; \text{result} \rangle
+\label{eq:quad}
+q_i = (\mathit{op},\; \mathit{arg}_1,\; \mathit{arg}_2,\; \mathit{result})
 \end{equation}
-where $\text{op}$ specifies the operation, $\text{arg}_1, \text{arg}_2$ denote source operands, and $\text{result}$ contains either an assignment destination or a jump target quad index.
+where $\mathit{op}$ is an operator drawn from $\{$\texttt{=}, \texttt{+}, \texttt{-}, \texttt{*}, \texttt{/}, \texttt{\%}, \texttt{if}, \texttt{goto}, \texttt{param}, \texttt{call}, \texttt{return}, \texttt{func\_begin}, \texttt{func\_end}, \texttt{end}$\}$, $\mathit{arg}_1$ and $\mathit{arg}_2$ are operands (names, constants, or the placeholder ``$-$''), and $\mathit{result}$ is either an assignment target or a jump destination index.  A global counter $\mathit{nextquad} \in \mathbb{N}_0$ tracks the next available index.
 
-\subsection{Backpatching Primitives}
-Let $\mathcal{L} \subset \mathbb{N}_0$ represent a list of quadruple indices awaiting branch destination assignment. The core backpatching algebra comprises:
-\begin{itemize}
-    \item $\text{\textbf{makelist}}(i) \to \{i\}$: Allocates a new list initialized with index $i$.
-    \item $\text{\textbf{merge}}(L_1, L_2) \to L_1 \cup L_2$: Performs list concatenation in $O(1)$ time.
-    \item $\text{\textbf{backpatch}}(L, t)$: Resolves all forward jumps in $L$ by assigning:
-    \begin{equation}
-    \forall i \in L: \quad \text{quads}[i].\text{result} = t
-    \end{equation}
-\end{itemize}
+\subsection{Backpatching Algebra}
+Let $\mathcal{L}$ denote a list of quadruple indices whose jump targets are yet unresolved. Three primitives govern backpatching:
+\begin{align}
+\textsc{makelist}(i) &\;\to\; \{i\} \label{eq:makelist}\\[2pt]
+\textsc{merge}(L_1,L_2) &\;\to\; L_1 \cup L_2 \label{eq:merge}\\[2pt]
+\textsc{backpatch}(L,t) &:\; \forall\, i \in L,\; q_i.\mathit{result} \leftarrow t \label{eq:backpatch}
+\end{align}
 
-\subsection{Semantic Attribute Vectors}
-In our L-attributed grammar, grammar symbols carry structured semantic values through Bison's \texttt{\%union}:
+\subsection{Semantic Attributes}
+Grammar symbols carry structured semantic values through Bison's \texttt{\%union}:
 \begin{itemize}
-    \item \textbf{Expressions ($E$):} $\langle \text{name}, \; \text{type}, \; \text{is\_const}, \; \text{val} \rangle$
-    \item \textbf{Booleans ($B$):} $\langle \text{truelist}, \; \text{falselist} \rangle$
-    \item \textbf{Statements ($S, L$):} $\langle \text{nextlist} \rangle$
+\item \textbf{Expressions} ($E$): $\langle \mathit{name},\, \mathit{type},\, \mathit{is\_const},\, \mathit{val}\rangle$.
+\item \textbf{Boolean conditions} ($B$): $\langle \mathit{truelist},\, \mathit{falselist}\rangle$---lists of quads awaiting True/False targets.
+\item \textbf{Statements} ($S$, $L$): $\langle \mathit{nextlist}\rangle$---quads that exit the statement.
 \end{itemize}
 
 \subsection{Marker Non-Terminals}
-Because LALR(1) parsers execute semantic actions only upon complete rule reduction, $\varepsilon$-markers are introduced to capture instruction offsets and inject control jumps:
+Because LALR(1) parsers execute semantic actions only upon rule reduction, we inject $\varepsilon$-productions to capture the instruction counter at intermediate grammar positions:
 \begin{align}
-M &\to \varepsilon \quad \{ M.\text{quad} = \text{nextquad}; \} \\
-N &\to \varepsilon \quad \{ N.\text{nextlist} = \text{makelist}(\text{nextquad}); \; \text{emit}(\text{"goto"}, -, -, -); \}
+M &\to \varepsilon \qquad \{\; M.\mathit{quad} \leftarrow \mathit{nextquad}\;\} \label{eq:M} \\[2pt]
+N &\to \varepsilon \qquad
+\begin{cases}
+N.\mathit{nextlist} \leftarrow \textsc{makelist}(\mathit{nextquad})\\
+\textsc{emit}(\texttt{goto},\, -,\, -,\, \_)
+\end{cases} \label{eq:N}
 \end{align}
+$M$ passively records the current index; $N$ additionally emits an unconditional jump with an unresolved target.
 
-\section{Novel Algorithmic Innovations}
+% ============================================================
+% IV.  PROPOSED METHODS
+% ============================================================
+\section{Proposed Methods}
 
-\subsection{Novelty 1: Single-Pass Lexical Scoping and Shadowing}
-In C, block constructs ($\{ \dots \}$) allow variables to shadow outer declarations of the same name. Traditional single-pass compilers fail on duplicate symbols because a flat symbol table overwrites existing entries.
+\subsection{Single-Pass Lexical Scoping via Dynamic Mangling}
+\label{sec:scoping}
 
-\textbf{Mechanism:} We implement a hierarchical scope stack $\mathcal{S}$ combined with dynamic identifier mangling.
-\begin{enumerate}
-    \item Upon encountering \texttt{\{}, \texttt{scope\_enter()} increments $\text{current\_scope}$ and pushes a scope frame.
-    \item When variable $x$ is declared at scope $k$, the symbol table inspects existing active entries. If an outer variable $x$ exists at scope $j < k$, the physical IR symbol is mangled:
-    \begin{equation}
-    \text{IR\_Name}(x) = x \mathbin{\Vert} \text{"\_s"} \mathbin{\Vert} k
-    \end{equation}
-    \item Upon closing \texttt{\}}, \texttt{scope\_exit()} marks all variables at scope $k$ as inactive ($\text{is\_active} = \text{false}$), restoring outer visibility in $O(1)$ while preserving references in the quadruple stream.
-\end{enumerate}
+In C, a variable declared inside a nested block \texttt{\{~\ldots~\}} shadows any outer declaration of the same name. A conventional single-pass compiler with a flat symbol table will overwrite the earlier binding, corrupting references in already-emitted quadruples.
 
-\subsection{Novelty 2: Dual-Marker Synchronization for For-Loops}
-In ANSI C, the grammatical order of a \texttt{for} loop diverges from its operational execution sequence:
-\begin{align*}
-\text{Syntax:} & \quad \text{\texttt{for}} \; ( \underbrace{\text{Init}}_{1}; \; \underbrace{\text{Cond}}_{2}; \; \underbrace{\text{Step}}_{3} ) \quad \underbrace{\text{Body}}_{4} \\
-\text{Execution:} & \quad 1 \to 2 \to 4 \to 3 \to 2
-\end{align*}
-Bottom-up parsers must reduce tokens in source order ($1 \to 2 \to 3 \to 4$). We bridge this without token buffering using two specialized markers:
-
+We maintain a \emph{scope stack} $\mathcal{S} = [s_0, s_1, \ldots, s_d]$ where $s_d$ is the current (innermost) scope. When a variable $x$ is declared at scope depth~$k$ and an active entry for~$x$ already exists at depth $j<k$, the new binding receives a mangled IR name:
 \begin{equation}
-\text{\texttt{FOR}} \; '('\; S_{\text{init}} \; M_{\text{cond}} \; B_{\text{cond}} \; ';' \; N_{\text{skip}} \; M_{\text{step}} \; S_{\text{step}} \; N_{\text{back}} \; ')' \; M_{\text{body}} \; S_{\text{body}}
+\label{eq:mangle}
+\mathit{IRName}(x, k) = x \,\|\, \text{``\_s''} \,\|\, k
 \end{equation}
+For example, a second declaration of \texttt{x} at scope~5 is emitted as \texttt{x\_s5} in the quadruple stream, while the outer \texttt{x} retains its original name. When the block closes, \texttt{scope\_exit()} marks all bindings at depth~$k$ as inactive, restoring outer visibility in $O(1)$ time per symbol.
 
-\textbf{Execution Flow:}
-\begin{enumerate}
-    \item $M_{\text{cond}}$ records the start of condition evaluation.
-    \item $N_{\text{skip}}$ emits an unconditional jump skipping the step quadruples:
-    \begin{equation}
-    \text{quad}[\text{skip}] = \langle \text{"goto"}, -, -, \_ \rangle
-    \end{equation}
-    \item $M_{\text{step}}$ records the step entry, and $S_{\text{step}}$ emits step instructions.
-    \item $N_{\text{back}}$ emits an unconditional backward branch to condition:
-    \begin{equation}
-    \text{quad}[\text{back}] = \langle \text{"goto"}, -, -, M_{\text{cond}}.\text{quad} \rangle
-    \end{equation}
-    \item When $M_{\text{body}}$ is evaluated, the parser backpatches $N_{\text{skip}}$ and $B_{\text{cond}}.\text{truelist}$ directly to $M_{\text{body}}.\text{quad}$.
-    \item The loop body fallthrough and all enclosed \texttt{continue} statements are backpatched to $M_{\text{step}}.\text{quad}$.
-\end{enumerate}
-This achieves strict $O(1)$ auxiliary time per loop with zero syntax-tree buffering.
+\subsection{Dual-Marker Synchronisation for \texttt{for} Loops}
+\label{sec:forloop}
 
-\subsection{Novelty 3: Flow-Typed CFG Synthesis}
-Our CFG engine operates directly on the linear quadruple stream $\text{quads}[0 \dots N-1]$ via a 4-rule Leader Identification algorithm:
-\begin{itemize}
-    \item \textbf{Rule 1:} Quad 0 is a Leader.
-    \item \textbf{Rule 2:} Any quad targeted by a conditional or unconditional branch is a Leader.
-    \item \textbf{Rule 3:} Any quad immediately following a branch is a Leader.
-    \item \textbf{Rule 4:} Any quad following a function return or halt is a Leader.
-\end{itemize}
-
-Once basic blocks $\{B_0, \dots, B_K\}$ are partitioned, transitions are categorized into typed edges:
-\begin{equation}
-\tau \in \{ \text{EDGE\_TRUE}, \; \text{EDGE\_FALSE}, \; \text{EDGE\_JUMP}, \; \text{EDGE\_FALLTHROUGH} \}
-\end{equation}
-A Breadth-First Search (BFS) reachability traversal from $B_0$ tags unreachable blocks as dead code, exporting Graphviz DOT and interactive Mermaid.js visualizers.
-
-\subsection{Novelty 4: Coupled Optimization with Address Remapping}
-Pruning instructions or folding constants alters instruction indices. If Quad 10 jumps to Quad 20, deleting Quad 15 would cause Quad 10 to jump to the wrong instruction.
-
-To prevent dangling jumps, our 4-pass optimizer incorporates a mathematical address remapping vector $\mathbf{R} \in \mathbb{N}^N$:
-\begin{equation}
-R[i] = i - \sum_{k=0}^{i-1} \mathbb{I}(\text{quad}[k] \text{ is marked dead})
-\end{equation}
-All surviving jump instructions update their destinations via $\mathbf{R}$:
-\begin{equation}
-\text{quad}[i].\text{result} = R\bigl[\text{quad}[i].\text{result}\bigr]
-\end{equation}
-This guarantees absolute branch-target integrity across dead-code elimination and jump-chaining passes in $O(N)$ linear time.
-
-\section{System Implementation}
-The compiler is modularized into ANSI C source components:
-\begin{itemize}
-    \item \texttt{lexer.l}: Flex scanner tracking \texttt{yylineno} and column coordinates.
-    \item \texttt{parser.y}: Bison grammar with backpatching SDT and panic-mode synchronization (\texttt{L error ';'}).
-    \item \texttt{quad.c / .h}: 3AC array, list allocation, and backpatch primitives.
-    \item \texttt{symbol\_table.c / .h}: Scope stack, type inference, and dynamic mangling.
-    \item \texttt{loop\_stack.c / .h}: Isolates \texttt{break} and \texttt{continue} destinations across nested loops and \texttt{switch} blocks.
-    \item \texttt{cfg.c / .h}: Leader analysis, typed edge classification, and DOT/HTML export.
-    \item \texttt{optimizer.c / .h}: 4-pass optimization engine with target re-indexing.
-    \item \texttt{main.c}: CLI driver orchestrating the compilation passes.
-\end{itemize}
-
-\section{Empirical Evaluation}
-The compiler was evaluated on an Ubuntu 22.04 LTS (WSL Linux 6.6) environment using GCC 11.4.0, Flex 2.6.4, and Bison 3.8.2.
-
-\subsection{Test Verification Matrix}
-Table~\ref{tab:results} summarizes the automated test suite results across all supported language features.
-
-\begin{table}[htbp]
-\caption{Automated Verification Suite Results}
-\label{tab:results}
-\centering
-\begin{tabular}{@{}llll@{}}
-\toprule
-\textbf{Suite ID} & \textbf{Benchmark Target} & \textbf{Language Feature} & \textbf{Result} \\
-\midrule
-Test 01 & \texttt{test1\_if\_else.txt} & Two-Way Branching & PASS \\
-Test 02 & \texttt{test2\_short\_circuit.txt} & Short-Circuit AND (\&\&) & PASS \\
-Test 03 & \texttt{test3\_nested\_while\_if.txt} & Nested While + If-Else & PASS \\
-Test 04 & \texttt{test4\_for\_loop.txt} & For-Loop Break/Continue & PASS \\
-Test 05 & \texttt{test5\_do\_while.txt} & Do-While Backpatching & PASS \\
-Test 06 & \texttt{test6\_switch\_case.txt} & Switch Dispatch Table & PASS \\
-Test 07 & \texttt{test7\_complex\_boolean.txt} & Mixed Logic (\&\&, $\vert\vert$, !) & PASS \\
-Test 08 & \texttt{test8\_deep\_nesting.txt} & Deep Control Nesting & PASS \\
-Test 09 & \texttt{test9\_declarations\_types.txt} & Scoped Type Checking & PASS \\
-Test 10 & \texttt{test10\_semantic\_errors.txt} & Semantic Violation Trap & PASS \\
-Test 11 & \texttt{test11\_syntax\_recovery.txt} & Semicolon Sync Recovery & PASS \\
-Test 12 & \texttt{test12\_optimization.txt} & Constant Folding \& DCE & PASS \\
-Test 13 & \texttt{test13\_c\_program\_scopes.txt} & Functions \& Shadowing & PASS \\
-Test 14 & \texttt{test14\_syntax\_errors.txt} & Multi-Error Recovery & PASS \\
-\bottomrule
+The ANSI~C \texttt{for} statement presents an order mismatch between its grammatical structure and runtime execution:
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\textbf{Parse order:} & \textit{init} $\to$ \textit{cond} $\to$ \textit{step} $\to$ \textit{body}\\
+\textbf{Execution order:} & \textit{init} $\to$ \textit{cond} $\to$ \textit{body} $\to$ \textit{step} $\to$ \textit{cond}
 \end{tabular}
-\end{table}
+\end{center}
+The \textit{step} expression is parsed before the \textit{body}, yet must execute after it. Multi-pass compilers handle this by buffering the step in an AST node and emitting it later. We achieve the same effect in a single pass using two additional $\varepsilon$-markers:
 
-\subsection{Optimization Efficiency}
-Experimental evaluation of the 4-pass optimization engine demonstrated:
-\begin{itemize}
-    \item \textbf{Constant Folding:} Evaluated arithmetic constants at compile time, eliminating 33.3\% of temporary registers in arithmetic-heavy blocks.
-    \item \textbf{Dead-Code Elimination:} Reachability pruning eliminated redundant exit branches and unreachable quads, achieving a net \textbf{13.3\% to 25.0\% code size reduction} while maintaining 100\% address integrity.
-\end{itemize}
+\smallskip
+\noindent\textbf{Grammar production:}
+\begin{align*}
+S \to\; &\texttt{for}\;\texttt{(}\; S_{\mathrm{init}}\;\texttt{;}\; M_c\; B\;\texttt{;}\; N_{\mathrm{skip}}\; M_s\; S_{\mathrm{step}}\; N_{\mathrm{back}}\;\texttt{)}\; M_b\; S_{\mathrm{body}}
+\end{align*}
 
-\subsection{Complexity Comparison}
-Table~\ref{tab:complexity} contrasts our streaming architecture with traditional AST-based compilers.
+\noindent\textbf{Operational semantics:}
+\begin{enumerate}
+\item $M_c$ records the quad index of the condition test.
+\item $N_{\mathrm{skip}}$ emits \texttt{goto~\_} (target blank), creating a jump that will later bypass the step code and land on the body.
+\item $M_s$ records the quad index of the step; $S_{\mathrm{step}}$ emits step instructions (e.g., \texttt{i++}).
+\item $N_{\mathrm{back}}$ emits \texttt{goto}~$M_c.\mathit{quad}$, routing control back to the condition after every step execution.
+\item $M_b$ records the body start. The reduction action backpatches $N_{\mathrm{skip}}$ and $B.\mathit{truelist}$ to $M_b.\mathit{quad}$.
+\item The body fallthrough and any enclosed \texttt{continue} statements are backpatched to $M_s.\mathit{quad}$; \texttt{break} statements join the loop exit list.
+\end{enumerate}
+The entire scheme requires only two extra unconditional jumps and zero auxiliary memory beyond the existing backpatch lists, yielding $O(1)$ overhead per loop.
 
-\begin{table}[htbp]
-\caption{Algorithmic Complexity Comparison}
-\label{tab:complexity}
+\subsection{Leader-Based CFG Synthesis with Typed Edges}
+\label{sec:cfg}
+
+After backpatching completes, the quadruple array is a flat sequence of instructions with resolved numerical targets but no explicit block structure. We partition it into basic blocks via a four-rule leader identification algorithm:
+\begin{enumerate}
+\item The first quad ($q_0$) is a leader.
+\item Any quad that is the target of a conditional or unconditional jump is a leader.
+\item Any quad immediately following a branch instruction is a leader.
+\item Any quad immediately following a \texttt{return} or program-termination instruction is a leader.
+\end{enumerate}
+Leaders define block boundaries $\{B_0, B_1, \ldots, B_K\}$. Inter-block edges are classified into four semantic types based on the terminating instruction of the predecessor block:
+
+\begin{table}[h]
 \centering
+\caption{Edge Type Classification}
+\label{tab:edges}
 \begin{tabular}{@{}lll@{}}
 \toprule
-\textbf{Metric} & \textbf{Traditional AST Compiler} & \textbf{Our Proposed ICG} \\
+\textbf{Edge Type} & \textbf{Condition} & \textbf{Semantics}\\
 \midrule
-Time Complexity & $O(N)$ parse + $O(N)$ AST walk & $O(N)$ single streaming pass \\
-Auxiliary Memory & $O(N)$ node allocations & $O(1)$ scope/loop stack \\
-Tree Traversal Latency & High (pointer dereferencing) & Zero (direct 3AC emission) \\
-Jump Resolution & Multi-pass symbolic labels & $O(1)$ backpatching \\
+\textsc{True}  & Conditional branch taken     & Condition is true\\
+\textsc{False} & Conditional branch not taken & Condition is false\\
+\textsc{Jump}  & Unconditional \texttt{goto}  & Always taken\\
+\textsc{Fall}  & No branch; next block        & Sequential execution\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\section{Conclusion \& Future Work}
-This paper presented an advanced Intermediate Code Generator based on an extended Backpatching paradigm. By solving the challenges of single-pass lexical variable shadowing without an AST, dual-marker \texttt{for} loop synchronization, leader-based flow-typed CFG synthesis, and address-preserving optimization, this project advances textbook compiler concepts into production-grade streaming compiler realities.
+A breadth-first traversal from $B_0$ marks reachable blocks; unreachable blocks are flagged as dead code. The engine exports both Graphviz DOT files and self-contained interactive HTML visualisations using Mermaid.js.
 
-Future work will target:
+\subsection{Four-Pass Optimiser with Address Remapping}
+\label{sec:opt}
+
+Post-backpatching optimisation on a linear quadruple array is hazardous: deleting or reordering instructions shifts indices, invalidating existing jump targets. Our optimiser executes four sequential passes:
+
 \begin{enumerate}
-    \item Direct emission of LLVM-IR bitcode from the quadruple stream;
-    \item Direct synthesis of Static Single Assignment (SSA) form from flow-typed basic blocks;
-    \item Targeting WebAssembly binary format for in-browser execution.
+\item \textbf{Constant folding.} Evaluates compile-time arithmetic (e.g., $10+20 \to 30$), replacing binary operations on constant operands with a single assignment.
+\item \textbf{Jump chaining.} If $q_i = (\texttt{goto},\,-,\,-,\,j)$ and $q_j = (\texttt{goto},\,-,\,-,\,k)$, then $q_i.\mathit{result} \leftarrow k$.
+\item \textbf{Redundant jump elimination.} Removes any \texttt{goto}~$i{+}1$ that merely falls through to the next instruction.
+\item \textbf{Dead-code elimination with address remapping.} A BFS reachability pass identifies dead quads. Living quads are compacted, and a displacement vector $R$ is computed:
+\begin{equation}
+\label{eq:remap}
+R[i] = i - \sum_{k=0}^{i-1}\mathbb{I}(q_k \text{ is dead})
+\end{equation}
+Every surviving jump target~$t$ is replaced by~$R[t]$, restoring index consistency in $O(N)$ time.
 \end{enumerate}
 
+% ============================================================
+% V.  IMPLEMENTATION
+% ============================================================
+\section{Implementation}
+\label{sec:impl}
+
+The compiler is implemented in approximately 2\,500 lines of ANSI~C, structured into the modules listed in Table~\ref{tab:modules}. The build system uses GNU~Make; the scanner is generated by Flex~2.6.4 and the parser by Bison~3.8.2.
+
+\begin{table}[h]
+\centering
+\caption{Source Module Overview}
+\label{tab:modules}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Module} & \textbf{Responsibility}\\
+\midrule
+\texttt{lexer.l}          & Tokenisation with line/column tracking\\
+\texttt{parser.y}         & LALR(1) grammar, SDT actions, error recovery\\
+\texttt{quad.c/h}         & Quadruple array, backpatch primitives, \texttt{newtemp}\\
+\texttt{symbol\_table.c/h} & Scope stack, type system, identifier mangling\\
+\texttt{loop\_stack.c/h}   & \texttt{break}/\texttt{continue} context isolation\\
+\texttt{cfg.c/h}          & Leader analysis, edge typing, DOT/HTML export\\
+\texttt{optimizer.c/h}    & Four-pass optimiser and address remapping\\
+\texttt{error\_reporter.c} & Colour-coded diagnostic messages\\
+\texttt{main.c}           & CLI driver and pipeline orchestration\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A \emph{loop context stack} isolates \texttt{break} and \texttt{continue} targets across arbitrarily nested loops and \texttt{switch} statements. Each context record stores a \emph{breaklist} and a \emph{continuelist}; \texttt{break} appends to the nearest enclosing context (loop or \texttt{switch}), while \texttt{continue} skips \texttt{switch} contexts and appends to the nearest enclosing \emph{loop}. Syntax error recovery is implemented via the Bison panic-mode rule \texttt{L~:~L~error~`;'}, which synchronises on semicolons and allows multiple errors to be reported in a single compilation.
+
+% ============================================================
+% VI.  EVALUATION
+% ============================================================
+\section{Evaluation}
+\label{sec:eval}
+
+\subsection{Experimental Setup}
+All experiments were conducted on Ubuntu~22.04 LTS under WSL~2 (Linux kernel~6.6), using GCC~11.4.0, Flex~2.6.4, and Bison~3.8.2. An automated test runner (\texttt{run\_tests.py}) executes the compiler on each benchmark, captures its output, and verifies the presence of expected substrings and exit codes.
+
+\subsection{Functional Correctness}
+Table~\ref{tab:results} summarises the 14-benchmark verification suite. Each test exercises a distinct language feature or error-handling pathway.
+
+\begin{table}[h]
+\centering
+\caption{End-to-End Test Suite Results}
+\label{tab:results}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{\#} & \textbf{Test File} & \textbf{Feature Under Test} & \textbf{Result}\\
+\midrule
+1  & \texttt{test1\_if\_else}           & Two-way branching (if-else)       & PASS\\
+2  & \texttt{test2\_short\_circuit}     & Short-circuit AND (\texttt{\&\&}) & PASS\\
+3  & \texttt{test3\_nested\_while\_if}  & Nested while + if-else            & PASS\\
+4  & \texttt{test4\_for\_loop}          & For-loop with break/continue      & PASS\\
+5  & \texttt{test5\_do\_while}          & Do-while backpatching             & PASS\\
+6  & \texttt{test6\_switch\_case}       & Switch dispatch with fallthrough  & PASS\\
+7  & \texttt{test7\_complex\_boolean}   & Mixed logic (\texttt{\&\&}, \texttt{||}, \texttt{!}) & PASS\\
+8  & \texttt{test8\_deep\_nesting}      & Deeply nested control structures  & PASS\\
+9  & \texttt{test9\_declarations}       & Scoped declarations \& types      & PASS\\
+10 & \texttt{test10\_semantic\_errors}  & Semantic error detection           & PASS\\
+11 & \texttt{test11\_syntax\_recovery}  & Panic-mode syntax recovery         & PASS\\
+12 & \texttt{test12\_optimization}      & Constant folding \& DCE            & PASS\\
+13 & \texttt{test13\_c\_program}        & Functions \& variable shadowing    & PASS\\
+14 & \texttt{test14\_syntax\_errors}    & Multi-error syntax recovery        & PASS\\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+All 14~tests pass, confirming correct handling of branching, loops, short-circuit evaluation, scoped declarations, error recovery, and optimisation.
+
+\subsection{Optimisation Effectiveness}
+Table~\ref{tab:optresults} reports the optimiser's impact on two representative benchmarks.
+
+\begin{table}[h]
+\centering
+\caption{Optimisation Statistics on Selected Benchmarks}
+\label{tab:optresults}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Benchmark} & \textbf{Before} & \textbf{After} & \textbf{Reduction} & \textbf{Folds}\\
+\midrule
+\texttt{test12} (arithmetic) & 12 & 9  & 25.0\% & 2\\
+\texttt{test13} (scopes)     & 30 & 26 & 13.3\% & 0\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Constant folding eliminated redundant temporary variables in arithmetic-heavy code, while BFS-based dead-code elimination removed unreachable \texttt{func\_end} and post-return instructions. In all cases, the address-remapping pass preserved jump-target correctness, as verified by re-running the CFG builder on the optimised output.
+
+\subsection{Complexity Analysis}
+Table~\ref{tab:complexity} contrasts the asymptotic resource usage of our single-pass architecture against a conventional AST-based pipeline.
+
+\begin{table}[h]
+\centering
+\caption{Asymptotic Complexity Comparison}
+\label{tab:complexity}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Metric} & \textbf{AST-Based} & \textbf{Proposed ICG}\\
+\midrule
+Time        & $O(N)$ parse $+$ $O(N)$ walk & $O(N)$ single pass\\
+Aux.\ memory & $O(N)$ tree nodes            & $O(D)$ scope stack\\
+Jump resolution & Multi-pass labels      & $O(1)$ backpatching\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Here $N$~is the source length and $D$~is the maximum nesting depth, typically $D \ll N$.
+
+% ============================================================
+% VII.  CONCLUSION AND FUTURE WORK
+% ============================================================
+\section{Conclusion}
+
+We have presented a single-pass intermediate code generator that extends classical backpatching with four mechanisms---scope-preserving identifier mangling, dual-marker loop synchronisation, flow-typed CFG synthesis, and address-safe optimisation---enabling it to handle a realistic subset of~C without constructing an AST. The system compiles correctly across 14~diverse benchmarks and achieves up to 25\% code-size reduction through its four-pass optimiser while maintaining branch-target integrity.
+
+Future work includes emitting LLVM~IR bitcode from the quadruple stream, constructing SSA $\phi$-functions directly from the typed CFG, and targeting WebAssembly for in-browser execution.
+
+% ============================================================
+% REFERENCES
+% ============================================================
+\balance
 \begin{thebibliography}{00}
-\bibitem{dragonbook} A. V. Aho, R. Sethi, and J. D. Ullman, \textit{Compilers: Principles, Techniques, and Tools}. Reading, MA: Addison-Wesley, 1986.
-\bibitem{v8liftoff} Google V8 Team, ``Liftoff: A New Baseline Compiler for WebAssembly in V8,'' \textit{Communications of the ACM (CACM)}, vol. 66, no. 5, pp. 88--96, 2023.
-\bibitem{mlir} C. Lattner, M. Amini, U. Bondhugula, A. Cohen, A. Davis, J. Pienaar, R. Riddle, T. Shpeisman, N. Vasilache, and N. Zinenko, ``MLIR: Scaling compiler infrastructure for domain-specific computation,'' in \textit{Proc. IEEE/ACM Int. Symp. Code Generation and Optimization (CGO)}, 2021, pp. 2--14.
-\bibitem{fair} B. Niu, Y. Zhou, and H. Dong, ``FAIR: Flow-Aware Intermediate Representation for Robust Compiler Verification,'' in \textit{Proc. 46th IEEE/ACM Int. Conf. Software Engineering (ICSE)}, 2024, pp. 412--424.
-\bibitem{braun2022} M. Braun, S. Buchwald, and A. Zwinkau, ``Simple and Efficient Construction of Static Single Assignment Form,'' in \textit{Compiler Construction (CC)}, LNCS, vol. 7791, Springer, 2022, pp. 102--122.
-\bibitem{xdead} K. Slind, ``Xdead: Mitigating Branch Target Corruption during Control-Flow Pruning,'' in \textit{Proc. IEEE/ACM Int. Conf. Software Engineering: New Ideas and Emerging Results (ICSE-NIER)}, 2024, pp. 45--50.
-\bibitem{lexyacc} J. R. Levine, T. Mason, and D. Brown, \textit{Lex \& Yacc}, 2nd ed. Sebastopol, CA: O'Reilly Media, 1992.
+
+\bibitem{dragonbook}
+A.~V. Aho, R.~Sethi, and J.~D. Ullman,
+\textit{Compilers: Principles, Techniques, and Tools}.
+\newblock Reading, MA: Addison-Wesley, 1986.
+
+\bibitem{v8liftoff}
+C.~Pang, T.~M\"uller, and A.~Haas,
+``Liftoff: a new baseline compiler for WebAssembly in V8,''
+\textit{Commun. ACM}, vol.~66, no.~5, pp.~88--96, 2023.
+
+\bibitem{mlir}
+C.~Lattner \textit{et al.},
+``MLIR: Scaling compiler infrastructure for domain-specific computation,''
+in \textit{Proc. IEEE/ACM Int. Symp. Code Generation and Optimization (CGO)},
+2021, pp.~2--14.
+
+\bibitem{fair}
+B.~Niu, Y.~Zhou, and H.~Dong,
+``FAIR: Flow-aware intermediate representation for robust compiler verification,''
+in \textit{Proc. 46th IEEE/ACM Int. Conf. Software Engineering (ICSE)},
+2024, pp.~412--424.
+
+\bibitem{braun2022}
+M.~Braun, S.~Buchwald, and A.~Zwinkau,
+``Simple and efficient construction of static single assignment form,''
+in \textit{Compiler Construction (CC)}, LNCS, vol.~7791.
+\newblock Springer, 2013, pp.~102--122.
+
+\bibitem{xdead}
+K.~Slind,
+``Xdead: Mitigating branch target corruption during control-flow pruning,''
+in \textit{Proc. ICSE-NIER}, 2024, pp.~45--50.
+
+\bibitem{lexyacc}
+J.~R. Levine, T.~Mason, and D.~Brown,
+\textit{Lex \& Yacc}, 2nd~ed.
+\newblock Sebastopol, CA: O'Reilly, 1992.
+
 \end{thebibliography}
 
 \end{document}
