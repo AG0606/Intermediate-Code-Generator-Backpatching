@@ -1,13 +1,89 @@
-# Intermediate Code Generator with Scope-Preserving Backpatching and Flow-Typed Control Flow Graph Synthesis
+# Intermediate Code Generator for Control Flow Statements with Scope-Preserving Backpatching and Flow-Typed Control Flow Graph Synthesis
 
 [![C Standard](https://img.shields.io/badge/Language-ANSI%20C99-00599C?logo=c)](https://en.wikipedia.org/wiki/C99)
 [![Lexer](https://img.shields.io/badge/Lexer-Flex%202.6.4-orange)](https://github.com/westes/flex)
 [![Parser](https://img.shields.io/badge/Parser-Bison%203.8.2-blue)](https://www.gnu.org/software/bison/)
-[![Verification](https://img.shields.io/badge/Tests-14%2F14%20Passing%20(100%25)-brightgreen)](#6-automated-verification-suite)
+[![Verification](https://img.shields.io/badge/Tests-14%2F14%20Passing%20(100%25)-brightgreen)](#-automated-verification-suite)
 [![Manuscript](https://img.shields.io/badge/Paper-IEEE%20Format%20(6%20Pages)-purple)](manuscript/IEEE_Paper_Draft.pdf)
 [![Presentation](https://img.shields.io/badge/Presentation-23%20Slides%20(PDF%2FPPTX)-red)](presentation/Final_PDF_PPT_CD.pdf)
 
 > **A high-performance, single-pass Intermediate Code Generator (ICG) for ANSI C control-flow constructs built upon an extended Backpatching paradigm—achieving complete lexical scope isolation, dual-marker loop ordering, flow-typed CFG synthesis, and branch-safe dead-code elimination without constructing an Abstract Syntax Tree (AST).**
+
+---
+
+## ⚡ Quick Start: Build & Run
+
+### Prerequisites
+* **C Compiler:** GCC 9.0+ or Clang 10.0+
+* **Lexer / Parser Generators:** Flex (v2.6.4+) and Bison (v3.8.2+)
+* **Build Tool:** GNU Make
+* **Test Runner:** Python 3.8+
+
+#### On Ubuntu / Debian / WSL:
+```bash
+sudo apt update
+sudo apt install -y build-essential flex bison python3
+```
+
+### Building & Running the Project
+```bash
+# 1. Clone the repository
+git clone https://github.com/AG0606/Intermediate-Code-Generator-Backpatching.git
+cd Intermediate-Code-Generator-Backpatching
+
+# 2. Build the compiler executable (creates ./icg)
+make
+
+# 3. Run the compiler on any input program
+./icg tests/test1_if_else.txt
+
+# 4. Run the automated 14-benchmark test suite
+make test
+
+# 5. (Optional) Recompile the 6-page IEEE paper PDF
+make paper
+
+# 6. Clean build artifacts
+make clean
+```
+
+---
+
+## 💻 Command-Line Interface (CLI) Usage
+
+The `icg` executable supports versatile output modes:
+
+```bash
+./icg [OPTIONS] <input_file>
+```
+
+### CLI Flag Reference
+| Flag | Description | Typical Use Case |
+| :--- | :--- | :--- |
+| *(default)* | Outputs the raw generated 3AC quadruple sequence to terminal. | Quick verification of emitted code. |
+| `--quads` | Displays the formatted 3AC quadruple table with operations, arguments, and results. | Detailed inspection of intermediate instructions. |
+| `--symtab` | Displays the active symbol table, showing scope IDs, types, and mangled names. | Inspecting variable shadowing and scopes. |
+| `--cfg` | Generates Graphviz (`cfg.dot`) and interactive HTML (`cfg.html`) CFG visualizers. | Control-flow graph analysis and rendering. |
+| `-O` | Runs the 4-pass optimizer with in-place displacement address remapping. | Dead-code elimination & constant folding. |
+| `--strict` | Enforces strict type checking (treats undeclared variables as fatal errors). | Strict semantic verification. |
+| `--json` | Exports compilation artifacts in machine-readable JSON format (`quads.json`). | Downstream compiler tooling & analysis. |
+| `--all` | Runs all analyses, prints tables, and outputs all graph and JSON files. | Comprehensive single-command audit. |
+| `-h`, `--help` | Displays the command-line help menu. | Help and usage reference. |
+
+### Example Compilation Commands
+```bash
+# Compile an if-else statement and view formatted 3AC quadruples
+./icg --quads tests/test1_if_else.txt
+
+# Compile a nested loop with functions and generate interactive CFG visualizations
+./icg --cfg tests/test4_for_loop.txt
+
+# Run the 4-pass optimizer and view code-size reduction
+./icg -O tests/test12_optimization.txt
+
+# Complete audit with all intermediate outputs
+./icg --all tests/test13_c_program_scopes.txt
+```
 
 ---
 
@@ -104,79 +180,6 @@ Intermediate-Code-Generator-Backpatching/
 ├── Makefile                      # Automated build system (make, test, clean, paper)
 ├── README.md                     # Project documentation and user guide
 └── .gitignore                    # Git rules (tracks deliverables, ignores build junk)
-```
-
----
-
-## 🛠️ Quick Start & Build Instructions
-
-### Prerequisites
-* **C Compiler:** GCC 9.0+ or Clang 10.0+
-* **Lexer / Parser Generators:** Flex (v2.6.4+) and Bison (v3.8.2+)
-* **Build Tool:** GNU Make
-* **Test Runner:** Python 3.8+
-
-#### On Ubuntu / Debian / WSL:
-```bash
-sudo apt update
-sudo apt install -y build-essential flex bison python3
-```
-
-### Building the Project
-```bash
-# 1. Clone the repository
-git clone https://github.com/AG0606/Intermediate-Code-Generator-Backpatching.git
-cd Intermediate-Code-Generator-Backpatching
-
-# 2. Build the compiler executable (creates ./icg)
-make
-
-# 3. Run the automated 14-benchmark test suite
-make test
-
-# 4. (Optional) Recompile the 6-page IEEE paper PDF
-make paper
-
-# 5. Clean build artifacts
-make clean
-```
-
----
-
-## 💻 Command-Line Interface (CLI) Usage
-
-The `icg` executable supports versatile output modes:
-
-```bash
-./icg [OPTIONS] <input_file>
-```
-
-### CLI Flag Reference
-| Flag | Description | Typical Use Case |
-| :--- | :--- | :--- |
-| *(default)* | Outputs the raw generated 3AC quadruple sequence to terminal. | Quick verification of emitted code. |
-| `--quads` | Displays the formatted 3AC quadruple table with operations, arguments, and results. | Detailed inspection of intermediate instructions. |
-| `--symtab` | Displays the active symbol table, showing scope IDs, types, and mangled names. | Inspecting variable shadowing and scopes. |
-| `--cfg` | Generates Graphviz (`cfg.dot`) and interactive HTML (`cfg.html`) CFG visualizers. | Control-flow graph analysis and rendering. |
-| `-O` | Runs the 4-pass optimizer with in-place displacement address remapping. | Dead-code elimination & constant folding. |
-| `--strict` | Enforces strict type checking (treats undeclared variables as fatal errors). | Strict semantic verification. |
-| `--json` | Exports compilation artifacts in machine-readable JSON format (`quads.json`). | Downstream compiler tooling & analysis. |
-| `--all` | Runs all analyses, prints tables, and outputs all graph and JSON files. | Comprehensive single-command audit. |
-| `-h`, `--help` | Displays the command-line help menu. | Help and usage reference. |
-
-### Example Compilation Commands
-```bash
-# Compile an if-else statement and view formatted 3AC quadruples
-./icg --quads tests/test1_if_else.txt
-
-# Compile a nested loop with functions and generate interactive CFG visualizations
-./icg --cfg tests/test4_for_loop.txt
-
-# Run the 4-pass optimizer and view code-size reduction
-./icg -O tests/test12_optimization.txt
-
-# Complete audit with all intermediate outputs
-./icg --all tests/test13_c_program_scopes.txt
 ```
 
 ---
