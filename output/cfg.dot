@@ -1,0 +1,43 @@
+digraph ControlFlowGraph {
+    node [shape=record, fontname="Consolas, monospace", style=filled];
+    edge [fontname="Consolas, monospace", fontsize=10];
+
+    B0 [fillcolor="#e8f4f8", color="#3498db", label="{B0 (Quads 0..0)|0: if a > 0 goto 2\l}"];
+    B1 [fillcolor="#e8f4f8", color="#3498db", label="{B1 (Quads 1..1)|1: goto 21\l}"];
+    B2 [fillcolor="#e8f4f8", color="#3498db", label="{B2 (Quads 2..2)|2: if b < 10 goto 4\l}"];
+    B3 [fillcolor="#e8f4f8", color="#3498db", label="{B3 (Quads 3..3)|3: goto 23\l}"];
+    B4 [fillcolor="#e8f4f8", color="#3498db", label="{B4 (Quads 4..4)|4: i = 0\l}"];
+    B5 [fillcolor="#e8f4f8", color="#3498db", label="{B5 (Quads 5..5)|5: if i < 5 goto 11\l}"];
+    B6 [fillcolor="#e8f4f8", color="#3498db", label="{B6 (Quads 6..6)|6: goto 17\l}"];
+    B7 [fillcolor="#f8d7da", color="#e74c3c", label="{B7 (Quads 7..7) [DEAD]|7: goto 11\l}"];
+    B8 [fillcolor="#e8f4f8", color="#3498db", label="{B8 (Quads 8..10)|8: t1 = i + 1\l9: i = t1\l10: goto 5\l}"];
+    B9 [fillcolor="#e8f4f8", color="#3498db", label="{B9 (Quads 11..11)|11: if i == 2 goto 13\l}"];
+    B10 [fillcolor="#e8f4f8", color="#3498db", label="{B10 (Quads 12..12)|12: goto 14\l}"];
+    B11 [fillcolor="#e8f4f8", color="#3498db", label="{B11 (Quads 13..13)|13: goto 17\l}"];
+    B12 [fillcolor="#e8f4f8", color="#3498db", label="{B12 (Quads 14..16)|14: t2 = x + i\l15: x = t2\l16: goto 8\l}"];
+    B13 [fillcolor="#e8f4f8", color="#3498db", label="{B13 (Quads 17..19)|17: t3 = b + 1\l18: b = t3\l19: goto 2\l}"];
+    B14 [fillcolor="#f8d7da", color="#e74c3c", label="{B14 (Quads 20..20) [DEAD]|20: goto 23\l}"];
+    B15 [fillcolor="#e8f4f8", color="#3498db", label="{B15 (Quads 21..22)|21: t4 = y - 1\l22: y = t4\l}"];
+    B16 [fillcolor="#e8f4f8", color="#3498db", label="{B16 (Quads 23..23)|23: end\l}"];
+
+    B0 -> B1 [label="false", color="#c0392b", fontcolor="#c0392b"];
+    B0 -> B2 [label="true", color="#27ae60", fontcolor="#27ae60"];
+    B1 -> B15 [label="jump", color="#f39c12", fontcolor="#f39c12"];
+    B2 -> B3 [label="false", color="#c0392b", fontcolor="#c0392b"];
+    B2 -> B4 [label="true", color="#27ae60", fontcolor="#27ae60"];
+    B3 -> B16 [label="jump", color="#f39c12", fontcolor="#f39c12"];
+    B4 -> B5 [label="fallthrough", color="#2980b9", fontcolor="#2980b9"];
+    B5 -> B6 [label="false", color="#c0392b", fontcolor="#c0392b"];
+    B5 -> B9 [label="true", color="#27ae60", fontcolor="#27ae60"];
+    B6 -> B13 [label="jump", color="#f39c12", fontcolor="#f39c12"];
+    B7 -> B9 [label="jump", color="#f39c12", fontcolor="#f39c12"];
+    B8 -> B5 [label="jump", color="#f39c12", fontcolor="#f39c12"];
+    B9 -> B10 [label="false", color="#c0392b", fontcolor="#c0392b"];
+    B9 -> B11 [label="true", color="#27ae60", fontcolor="#27ae60"];
+    B10 -> B12 [label="jump", color="#f39c12", fontcolor="#f39c12"];
+    B11 -> B13 [label="jump", color="#f39c12", fontcolor="#f39c12"];
+    B12 -> B8 [label="jump", color="#f39c12", fontcolor="#f39c12"];
+    B13 -> B2 [label="jump", color="#f39c12", fontcolor="#f39c12"];
+    B14 -> B16 [label="jump", color="#f39c12", fontcolor="#f39c12"];
+    B15 -> B16 [label="fallthrough", color="#2980b9", fontcolor="#2980b9"];
+}

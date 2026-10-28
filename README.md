@@ -98,6 +98,7 @@ The `icg` executable supports versatile output modes:
 | 📑 **Technical Report** | [`report/PROJECT_REPORT.md`](report/PROJECT_REPORT.md) | **Markdown** | Comprehensive engineering project report covering theory, design, data structures, and evaluations. |
 | 💻 **Compiler Source** | [`src/`](src/) | **C / Lex / Yacc** | Complete ANSI C compiler implementation (Flex lexer, Bison parser, CFG, optimizer). |
 | 🧪 **Test Suite** | [`tests/`](tests/) | **14 Benchmarks** | Automated Python test runner and 14 comprehensive test input programs. |
+| 🌐 **Visual CFGs** | [`output/`](output/) | **DOT & HTML** | Sample interactive Mermaid.js and Graphviz Control Flow Graphs (raw & optimized). |
 
 ---
 
@@ -176,6 +177,13 @@ Intermediate-Code-Generator-Backpatching/
 │
 ├── report/                       # Formal Engineering Project Report
 │   └── PROJECT_REPORT.md         # Comprehensive technical report (Theory, Code, Results)
+│
+├── output/                       # Sample Generated Outputs & Visualizations
+│   ├── cfg.dot                   # Raw Graphviz CFG DOT graph (unoptimized)
+│   ├── cfg.html                  # Interactive browser-based Mermaid.js CFG (unoptimized)
+│   ├── cfg_optimized.dot         # Optimized Graphviz CFG DOT graph (post-DCE & folding)
+│   ├── cfg_optimized.html        # Interactive browser-based Mermaid.js CFG (optimized)
+│   └── README.md                 # Overview of sample outputs and visualization guide
 │
 ├── Makefile                      # Automated build system (make, test, clean, paper)
 ├── README.md                     # Project documentation and user guide
