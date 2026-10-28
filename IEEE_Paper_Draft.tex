@@ -31,8 +31,8 @@
   stringstyle=\color{red!70!black},
   showstringspaces=false,
   xleftmargin=1.5em,
-  aboveskip=6pt,
-  belowskip=4pt,
+  aboveskip=4pt,
+  belowskip=2pt,
 }
 
 \lstdefinestyle{quad}{
@@ -42,9 +42,13 @@
   numberstyle=\tiny\color{gray},
   frame=tb,
   xleftmargin=1.5em,
-  aboveskip=6pt,
-  belowskip=4pt,
+  aboveskip=4pt,
+  belowskip=2pt,
 }
+
+\setlength{\textfloatsep}{8pt plus 1.0pt minus 1.0pt}
+\setlength{\floatsep}{6pt plus 1.0pt minus 1.0pt}
+\setlength{\intextsep}{6pt plus 1.0pt minus 1.0pt}
 
 \hypersetup{hidelinks}
 
@@ -78,9 +82,9 @@ intermediate code generation, backpatching, three-address code, control flow gra
 % ============================================================
 \section{Introduction}
 
-Intermediate code generation is the compiler phase that lowers a parsed source program into a machine-independent representation suitable for optimisation and eventual target-code emission. Production compilers such as LLVM/Clang and GCC accomplish this through multi-pass pipelines: the front-end first constructs a persistent Abstract Syntax Tree~(AST), performs semantic analysis and type checking over repeated traversals, and finally lowers the annotated tree into a linear intermediate representation~(IR) such as LLVM-IR or GIMPLE~\cite{dragonbook}.
+Intermediate code generation is the compiler phase that lowers a parsed source program into a machine-independent representation suitable for optimisation and eventual target-code emission. Production compilers such as LLVM/Clang~\cite{llvm} and GCC accomplish this through multi-pass pipelines: the front-end first constructs a persistent Abstract Syntax Tree~(AST), performs semantic analysis and type checking over repeated traversals, and finally lowers the annotated tree into a linear intermediate representation~(IR) such as LLVM-IR or GIMPLE~\cite{dragonbook,llvm}.
 
-Although multi-pass AST-based architectures enable powerful whole-program transformations, their heap-allocated tree nodes incur non-trivial memory pressure and cache-miss penalties. These costs are especially problematic in \emph{streaming compilation} scenarios---exemplified by the Liftoff baseline compiler in Google's V8 engine~\cite{v8liftoff}---where machine code must be emitted with minimal latency as bytecode arrives over the network. In such environments, even a single full-tree traversal may be prohibitively expensive.
+Although multi-pass AST-based architectures enable powerful whole-program transformations, their heap-allocated tree nodes incur non-trivial memory pressure and cache-miss penalties. These costs are especially problematic in \emph{streaming compilation} scenarios---exemplified by the WebAssembly standard~\cite{wasmhaas} and the Liftoff baseline compiler in Google's V8 engine~\cite{v8liftoff}---where machine code must be emitted with minimal latency as bytecode arrives over the network. In such environments, even a single full-tree traversal may be prohibitively expensive.
 
 An alternative paradigm is \emph{single-pass syntax-directed translation}~(SDT), in which intermediate instructions are emitted directly during parsing. However, SDT introduces the well-known \emph{forward-jump dilemma}: when the parser encounters a conditional branch such as
 \begin{lstlisting}
@@ -91,7 +95,7 @@ the jump destination of the false branch is unknown because the \texttt{then}-bl
 Extending backpatching to handle a realistic C subset raises four engineering challenges that motivate this work:
 \begin{enumerate}[leftmargin=*]
 \item \textbf{Lexical scoping.} C permits variable re-declaration inside nested blocks. A flat symbol table cannot distinguish inner and outer instances of the same identifier during single-pass emission, leading to corrupted variable references.
-\item \textbf{For-loop order inversion.} In~C, the grammatical token order of a \texttt{for} header is \emph{init--condition--step}, but the execution order is \emph{init--condition--body--step}. A bottom-up (LALR) parser processes tokens left-to-right, so the step expression is parsed \emph{before} the body that must precede it at run time.
+\item \textbf{For-loop order inversion.} In~C, the grammatical token order of a \texttt{for} header is \emph{init--condition--step}, but the execution order is \emph{init--condition--body--step}. A bottom-up LALR(1) parser~\cite{deremer1982} processes tokens left-to-right, so the step expression is parsed \emph{before} the body that must precede it at run time.
 \item \textbf{CFG construction.} Textbook backpatching produces an unlabelled quadruple array with raw numerical jump targets but no structured control-flow graph amenable to further analysis.
 \item \textbf{Post-backpatching optimisation.} Removing dead instructions shifts quadruple indices, silently corrupting all existing jump targets---a vulnerability recently termed ``branch-target corruption''~\cite{xdead}.
 \end{enumerate}
@@ -111,17 +115,17 @@ The complete implementation, test suite, and build infrastructure are publicly a
 % ============================================================
 \section{Related Work}
 
-\textbf{Classical backpatching.} Aho, Sethi, and Ullman~\cite{dragonbook} introduced the \textsc{makelist}--\textsc{merge}--\textsc{backpatch} algebra for resolving forward jumps in a single bottom-up pass. Their treatment covers simple \texttt{if-else} and \texttt{while} constructs but omits block scoping, \texttt{for}-loop reordering, \texttt{switch-case} dispatch, and post-generation optimisation. Levine et al.~\cite{lexyacc} provided practical guidance for building Flex/Bison parsers but did not address intermediate code generation or backpatching.
+\textbf{Classical backpatching.} Aho, Sethi, and Ullman~\cite{dragonbook} introduced the \textsc{makelist}--\textsc{merge}--\textsc{backpatch} algebra for resolving forward jumps in a single bottom-up pass. Their treatment covers simple \texttt{if-else} and \texttt{while} constructs but omits block scoping, \texttt{for}-loop reordering, \texttt{switch-case} dispatch, and post-generation optimisation. Levine et al.~\cite{lexyacc} provided practical guidance for building Flex/Bison parsers using LALR(1) grammars~\cite{deremer1982} but did not address intermediate code generation or backpatching.
 
-\textbf{Streaming compilation.} Google's V8 Liftoff compiler~\cite{v8liftoff} demonstrates the practical value of single-pass code emission for WebAssembly, using fixup tables---structurally analogous to backpatching---to eliminate the need for AST construction. Liftoff achieves sub-millisecond time-to-first-instruction on constrained devices. Our work generalises these streaming principles to source-level C control constructs with full lexical scoping.
+\textbf{Streaming and single-pass compilation.} Google's V8 Liftoff compiler~\cite{v8liftoff} demonstrates the practical value of single-pass code emission for WebAssembly~\cite{wasmhaas}, using fixup tables---structurally analogous to backpatching---to eliminate the need for AST construction. Liftoff achieves sub-millisecond time-to-first-instruction on constrained devices. Similarly, the Lua programming language pioneered single-pass register-based bytecode generation without an AST~\cite{luaieru}. Our work generalises these streaming principles to source-level C control constructs with full lexical scoping.
 
-\textbf{Multi-level IRs.} Lattner et al.~\cite{mlir} showed with MLIR that basic blocks of linear operations remain the most effective abstraction for compiler transformations, advocating explicit control-flow-graph representations over nested AST structures. Our CFG engine produces exactly this kind of basic-block representation from raw quadruples.
+\textbf{Multi-level and linear IRs.} Lattner et al.~\cite{mlir} showed with MLIR that basic blocks of linear operations remain the most effective abstraction for compiler transformations, building upon lessons from the LLVM compiler framework~\cite{llvm} and advocating explicit control-flow-graph representations over nested AST structures. Our CFG engine produces exactly this kind of basic-block representation from raw quadruples.
 
-\textbf{Flow-typed edges.} Niu et al.~\cite{fair} introduced the FAIR intermediate representation for static vulnerability detection, arguing that CFG edges must carry explicit semantic types (True, False, Jump, Fallthrough) to support sound analysis. Standard textbook backpatching outputs unclassified numerical targets; our system directly incorporates FAIR's edge classification taxonomy.
+\textbf{Flow-typed edges and control flow analysis.} Niu et al.~\cite{fair} introduced the FAIR intermediate representation for static vulnerability detection, arguing that CFG edges must carry explicit semantic types (True, False, Jump, Fallthrough) to support sound analysis, extending Frances Allen's foundational control flow analysis techniques~\cite{allen1970}. Standard textbook backpatching outputs unclassified numerical targets; our system directly incorporates FAIR's edge classification taxonomy.
 
-\textbf{Direct IR construction.} Braun et al.~\cite{braun2022} proved that SSA form can be constructed directly during parsing without iterative dominator-tree computation over an AST, validating the feasibility of single-pass IR generation with scope awareness. Our dynamic variable-mangling mechanism applies a similar principle in a bottom-up LALR(1) environment.
+\textbf{Direct IR construction and SSA form.} Braun et al.~\cite{braun2022} proved that Static Single Assignment (SSA) form can be constructed directly during parsing without iterative dominator-tree computation over an AST, following earlier foundational work by Cytron et al.~\cite{cytron1991}. Our dynamic variable-mangling mechanism applies a similar principle in a bottom-up LALR(1) environment.
 
-\textbf{Branch-target integrity.} Recent work on dead-code elimination in compiled binaries~\cite{xdead} highlights that deleting instructions without re-indexing jump targets introduces silent control-flow corruption---programs that compile but execute incorrectly. Our coupled optimiser addresses this through an explicit displacement-vector remapping pass.
+\textbf{Branch-target integrity and dead-code elimination.} Recent work on dead-code elimination in compiled binaries by Slind~\cite{xdead} highlights that deleting instructions without re-indexing jump targets introduces silent control-flow corruption. In optimizing compilers, dead-code elimination and jump optimization have been extensively studied by Knoop et al.~\cite{knoop1994} and Muchnick~\cite{muchnick}. Our coupled optimiser addresses this via an explicit displacement-vector remapping pass.
 
 % ============================================================
 % III.  SYSTEM ARCHITECTURE
@@ -401,6 +405,7 @@ Leaders define block boundaries $\{B_0, B_1, \ldots, B_K\}$. Inter-block edges a
 \centering
 \caption{CFG Edge Type Classification}
 \label{tab:edges}
+\footnotesize
 \begin{tabular}{@{}lll@{}}
 \toprule
 \textbf{Edge Type} & \textbf{Trigger Condition} & \textbf{Semantics}\\
@@ -503,6 +508,7 @@ The compiler is implemented in approximately 2\,500~lines of ANSI~C, structured 
 \centering
 \caption{Source Module Overview}
 \label{tab:modules}
+\footnotesize
 \begin{tabular}{@{}ll@{}}
 \toprule
 \textbf{Module} & \textbf{Responsibility}\\
@@ -549,8 +555,8 @@ Table~\ref{tab:results} summarises the 14-benchmark verification suite. Each tes
 \centering
 \caption{End-to-End Test Suite Results}
 \label{tab:results}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{@{}clll@{}}
+\footnotesize
+\begin{tabular}{@{}r@{\hspace{3pt}}l@{\hspace{4pt}}l@{\hspace{3pt}}c@{}}
 \toprule
 \textbf{\#} & \textbf{Test File} & \textbf{Feature Under Test} & \textbf{Result}\\
 \midrule
@@ -569,8 +575,7 @@ Table~\ref{tab:results} summarises the 14-benchmark verification suite. Each tes
 13 & \texttt{test13\_c\_program}        & Functions \& variable shadowing    & PASS\\
 14 & \texttt{test14\_syntax\_errors}    & Multi-error syntax recovery        & PASS\\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular}
 \end{table}
 
 All 14~tests pass, confirming correct handling of branching, loops, short-circuit evaluation, scoped declarations with shadowing, \texttt{switch-case} dispatch, error recovery, and multi-pass optimisation.
@@ -582,6 +587,7 @@ Table~\ref{tab:optresults} reports the optimiser's impact on three representativ
 \centering
 \caption{Optimisation Statistics on Selected Benchmarks}
 \label{tab:optresults}
+\footnotesize
 \begin{tabular}{@{}lrrrl@{}}
 \toprule
 \textbf{Benchmark} & \textbf{Before} & \textbf{After} & \textbf{Reduction} & \textbf{Passes Active}\\
@@ -602,6 +608,7 @@ Table~\ref{tab:complexity} contrasts the asymptotic resource usage of our single
 \centering
 \caption{Asymptotic Complexity Comparison}
 \label{tab:complexity}
+\footnotesize
 \begin{tabular}{@{}lll@{}}
 \toprule
 \textbf{Metric} & \textbf{AST-Based} & \textbf{Proposed ICG}\\
@@ -623,7 +630,7 @@ Table~\ref{tab:features} summarises the C language constructs handled by our ICG
 \centering
 \caption{Language Feature Comparison}
 \label{tab:features}
-\resizebox{\columnwidth}{!}{%
+\footnotesize
 \begin{tabular}{@{}lcc@{}}
 \toprule
 \textbf{Feature} & \textbf{Dragon Book~\cite{dragonbook}} & \textbf{Our ICG}\\
@@ -643,8 +650,7 @@ CFG construction                & ---        & \checkmark\\
 Post-backpatch optimisation     & ---        & \checkmark\\
 Error recovery                  & ---        & \checkmark\\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular}
 \end{table}
 
 % ============================================================
@@ -654,7 +660,7 @@ Error recovery                  & ---        & \checkmark\\
 
 We have presented a single-pass intermediate code generator that extends classical backpatching with four mechanisms---scope-preserving identifier mangling, dual-marker loop synchronisation, flow-typed CFG synthesis, and address-safe optimisation---enabling it to handle a realistic subset of~C without constructing an AST. The system compiles correctly across 14~diverse benchmarks and achieves up to 25\% code-size reduction through its four-pass optimiser while maintaining branch-target integrity.
 
-Several directions for future work emerge. First, the quadruple stream could be lowered directly into LLVM~IR bitcode, enabling access to LLVM's mature optimisation and code-generation infrastructure. Second, Static Single Assignment~(SSA) $\phi$-functions could be constructed directly from our flow-typed CFG using the algorithm of Braun et al.~\cite{braun2022}, avoiding the traditional dominator-tree computation. Third, a WebAssembly binary backend would enable in-browser execution of compiled programs. Finally, extending the grammar to support arrays, pointers, and \texttt{struct} types would bring the system closer to full ANSI~C coverage.
+Several directions for future work emerge. First, the quadruple stream could be lowered directly into LLVM~IR bitcode~\cite{llvm}, enabling access to LLVM's mature optimisation and code-generation infrastructure. Second, Static Single Assignment~(SSA) $\phi$-functions could be constructed directly from our flow-typed CFG using the algorithm of Braun et al.~\cite{braun2022} or classical dominance frontiers~\cite{cytron1991}, avoiding the traditional full-AST pass. Third, a WebAssembly binary backend~\cite{wasmhaas} would enable in-browser execution of compiled programs. Finally, extending the grammar to support arrays, pointers, and \texttt{struct} types would bring the system closer to full ANSI~C coverage.
 
 % ============================================================
 % REFERENCES
@@ -672,11 +678,23 @@ C.~Pang, T.~M\"uller, and A.~Haas,
 ``Liftoff: a new baseline compiler for WebAssembly in V8,''
 \textit{Commun. ACM}, vol.~66, no.~5, pp.~88--96, 2023.
 
+\bibitem{wasmhaas}
+A.~Haas \textit{et al.},
+``Bringing the web up to speed with WebAssembly,''
+in \textit{Proc. 38th ACM SIGPLAN Conf. Programming Language Design and Implementation (PLDI)},
+2017, pp.~185--200.
+
 \bibitem{mlir}
 C.~Lattner \textit{et al.},
 ``MLIR: Scaling compiler infrastructure for domain-specific computation,''
 in \textit{Proc. IEEE/ACM Int. Symp. Code Generation and Optimization (CGO)},
 2021, pp.~2--14.
+
+\bibitem{llvm}
+C.~Lattner and V.~Adve,
+``LLVM: A compilation framework for lifelong program analysis \& transformation,''
+in \textit{Proc. IEEE/ACM Int. Symp. Code Generation and Optimization (CGO)},
+2004, pp.~75--86.
 
 \bibitem{fair}
 B.~Niu, Y.~Zhou, and H.~Dong,
@@ -690,10 +708,41 @@ M.~Braun, S.~Buchwald, and A.~Zwinkau,
 in \textit{Compiler Construction (CC)}, LNCS, vol.~7791.
 \newblock Springer, 2013, pp.~102--122.
 
+\bibitem{cytron1991}
+R.~Cytron, J.~Ferrante, B.~K. Rosen, M.~N. Wegman, and F.~K. Zadeck,
+``Efficiently computing static single assignment form and the control dependence graph,''
+\textit{ACM Trans. Program. Lang. Syst. (TOPLAS)}, vol.~13, no.~4, pp.~451--490, 1991.
+
 \bibitem{xdead}
 K.~Slind,
 ``Xdead: Mitigating branch target corruption during control-flow pruning,''
-in \textit{Proc. ICSE-NIER}, 2024, pp.~45--50.
+in \textit{Proc. IEEE/ACM Int. Conf. Software Engineering: New Ideas and Emerging Results (ICSE-NIER)},
+2024, pp.~45--50.
+
+\bibitem{allen1970}
+F.~E. Allen,
+``Control flow analysis,''
+\textit{ACM SIGPLAN Notices}, vol.~5, no.~7, pp.~1--19, 1970.
+
+\bibitem{deremer1982}
+F.~DeRemer and T.~Pennello,
+``Efficient computation of LALR(1) look-ahead sets,''
+\textit{ACM Trans. Program. Lang. Syst. (TOPLAS)}, vol.~4, no.~4, pp.~615--649, 1982.
+
+\bibitem{luaieru}
+R.~Ierusalimschy, L.~H. de~Figueiredo, and W.~Celes,
+``The implementation of Lua 5.0,''
+\textit{J. Universal Computer Science}, vol.~11, no.~7, pp.~1159--1176, 2005.
+
+\bibitem{knoop1994}
+J.~Knoop, O.~R\"uthing, and B.~Steffen,
+``Optimal code motion: Theory and practice,''
+\textit{ACM Trans. Program. Lang. Syst. (TOPLAS)}, vol.~16, no.~4, pp.~1117--1155, 1994.
+
+\bibitem{muchnick}
+S.~S. Muchnick,
+\textit{Advanced Compiler Design and Implementation}.
+\newblock San Francisco, CA: Morgan Kaufmann, 1997.
 
 \bibitem{lexyacc}
 J.~R. Levine, T.~Mason, and D.~Brown,
