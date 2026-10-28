@@ -1,4 +1,4 @@
-# AST-Free Streaming Intermediate Code Generation with Scope-Preserving Backpatching and Flow-Typed Control Flow Synthesis
+# Intermediate Code Generator for Control Flow Statements with Scope-Preserving Backpatching and Flow-Typed Control Flow Graph Synthesis
 
 **Ashutosh Gupta** (`24BCE2983`), **Dhruv Mathur** (`24BCE2504`), **Somya Raj Singh Dalawat** (`24BCE3001`)  
 *School of Computer Science and Engineering*  

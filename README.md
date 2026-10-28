@@ -101,9 +101,6 @@ Intermediate-Code-Generator-Backpatching/
 ├── report/                       # Formal Engineering Project Report
 │   └── PROJECT_REPORT.md         # Comprehensive technical report (Theory, Code, Results)
 │
-├── examples/                     # Demo Outputs & Sample Graphs
-│   └── output/                   # Sample CFG DOT and interactive HTML visualizations
-│
 ├── Makefile                      # Automated build system (make, test, clean, paper)
 ├── README.md                     # Project documentation and user guide
 └── .gitignore                    # Git rules (tracks deliverables, ignores build junk)

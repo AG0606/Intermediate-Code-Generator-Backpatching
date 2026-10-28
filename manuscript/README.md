@@ -1,4 +1,4 @@
-# Research Manuscript: AST-Free Streaming Intermediate Code Generation
+# Research Manuscript: Intermediate Code Generator for Control Flow Statements
 
 This directory contains the formal IEEE conference paper draft for the project, formatted in strict compliance with the **IEEE Transactions / Conference (IEEEtran)** two-column standard.
 
