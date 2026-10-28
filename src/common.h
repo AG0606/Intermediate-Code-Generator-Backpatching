@@ -18,6 +18,11 @@ extern bool opt_strict;
 extern bool opt_json;
 extern const char *output_cfg_dot;
 extern const char *output_cfg_html;
+extern const char *output_cfg_opt_dot;
+extern const char *output_cfg_opt_html;
+extern const char *output_quads_json;
+
+void ensure_output_dir(void);
 
 /* Error tracking */
 extern int semantic_errors;

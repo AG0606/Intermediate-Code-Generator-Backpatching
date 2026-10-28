@@ -9,8 +9,11 @@ bool opt_all = false;
 bool opt_trace = false;
 bool opt_strict = false;
 bool opt_json = false;
-const char *output_cfg_dot = "cfg.dot";
-const char *output_cfg_html = "cfg.html";
+const char *output_cfg_dot = "output/cfg.dot";
+const char *output_cfg_html = "output/cfg.html";
+const char *output_cfg_opt_dot = "output/cfg_optimized.dot";
+const char *output_cfg_opt_html = "output/cfg_optimized.html";
+const char *output_quads_json = "output/quads.json";
 
 int semantic_errors = 0;
 int semantic_warnings = 0;

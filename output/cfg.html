@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CFG Visualizer - tests/test8_deep_nesting.txt</title>
+<title>CFG Visualizer - tests/test13_c_program_scopes.txt</title>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <style>
   body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #0f172a; color: #f8fafc; padding: 24px; }
@@ -28,7 +28,7 @@
 <div class="container">
   <header>
     <h1>Control Flow Graph & Basic Blocks</h1>
-    <div><span class="badge">Compiler Design Project</span><span class="badge">Total Quads: 24</span><span class="badge">Basic Blocks: 17</span></div>
+    <div><span class="badge">Compiler Design Project</span><span class="badge">Total Quads: 30</span><span class="badge">Basic Blocks: 13</span></div>
   </header>
   <div class="card" style="margin-bottom: 24px;">
     <h2>Interactive Control Flow Graph</h2>
@@ -40,95 +40,84 @@
     </div>
     <div class="mermaid">
 graph TD;
-    B0["<b>Block B0</b> [Quads 0..0]<br/>0: if a &gt; 0 goto 2<br/>"]
-    B1["<b>Block B1</b> [Quads 1..1]<br/>1: goto 21<br/>"]
-    B2["<b>Block B2</b> [Quads 2..2]<br/>2: if b &lt; 10 goto 4<br/>"]
-    B3["<b>Block B3</b> [Quads 3..3]<br/>3: goto 23<br/>"]
-    B4["<b>Block B4</b> [Quads 4..4]<br/>4: i = 0<br/>"]
-    B5["<b>Block B5</b> [Quads 5..5]<br/>5: if i &lt; 5 goto 11<br/>"]
-    B6["<b>Block B6</b> [Quads 6..6]<br/>6: goto 17<br/>"]
-    B7["<b>Block B7</b> [Quads 7..7]<br/>7: goto 11<br/>"]
-    B8["<b>Block B8</b> [Quads 8..10]<br/>8: t1 = i + 1<br/>9: i = t1<br/>10: goto 5<br/>"]
-    B9["<b>Block B9</b> [Quads 11..11]<br/>11: if i == 2 goto 13<br/>"]
-    B10["<b>Block B10</b> [Quads 12..12]<br/>12: goto 14<br/>"]
-    B11["<b>Block B11</b> [Quads 13..13]<br/>13: goto 17<br/>"]
-    B12["<b>Block B12</b> [Quads 14..16]<br/>14: t2 = x + i<br/>15: x = t2<br/>16: goto 8<br/>"]
-    B13["<b>Block B13</b> [Quads 17..19]<br/>17: t3 = b + 1<br/>18: b = t3<br/>19: goto 2<br/>"]
-    B14["<b>Block B14</b> [Quads 20..20]<br/>20: goto 23<br/>"]
-    B15["<b>Block B15</b> [Quads 21..22]<br/>21: t4 = y - 1<br/>22: y = t4<br/>"]
-    B16["<b>Block B16</b> [Quads 23..23]<br/>23: end<br/>"]
+    B0["<b>Block B0</b> [Quads 0..1]<br/>0: func_begin helper<br/>1: if a &gt; 100 goto 3<br/>"]
+    B1["<b>Block B1</b> [Quads 2..2]<br/>2: goto 4<br/>"]
+    B2["<b>Block B2</b> [Quads 3..3]<br/>3: return a<br/>"]
+    B3["<b>Block B3</b> [Quads 4..5]<br/>4: t1 = a * 2<br/>5: return t1<br/>"]
+    B4["<b>Block B4</b> [Quads 6..6]<br/>6: func_end helper<br/>"]
+    B5["<b>Block B5</b> [Quads 7..11]<br/>7: func_begin main<br/>8: x = 10<br/>9: y = 20<br/>10: total = 0<br/>11: i = 0<br/>"]
+    B6["<b>Block B6</b> [Quads 12..12]<br/>12: if i &lt; 5 goto 18<br/>"]
+    B7["<b>Block B7</b> [Quads 13..13]<br/>13: goto 24<br/>"]
+    B8["<b>Block B8</b> [Quads 14..14]<br/>14: goto 18<br/>"]
+    B9["<b>Block B9</b> [Quads 15..17]<br/>15: t2 = i + 1<br/>16: i = t2<br/>17: goto 12<br/>"]
+    B10["<b>Block B10</b> [Quads 18..23]<br/>18: x_s5 = 100<br/>19: t3 = total + x_s5<br/>20: total = t3<br/>21: t4 = total + x<br/>22: total = t4<br/>23: goto 15<br/>"]
+    B11["<b>Block B11</b> [Quads 24..27]<br/>24: param total<br/>25: t5 = call helper, 1<br/>26: result = t5<br/>27: return result<br/>"]
+    B12["<b>Block B12</b> [Quads 28..29]<br/>28: func_end main<br/>29: end<br/>"]
     B0 -->|false| B1
     B0 -->|true| B2
-    B1 -->|jump| B15
-    B2 -->|false| B3
-    B2 -->|true| B4
-    B3 -->|jump| B16
+    B1 -->|jump| B3
     B4 -->|fallthrough| B5
-    B5 -->|false| B6
-    B5 -->|true| B9
-    B6 -->|jump| B13
-    B7 -->|jump| B9
-    B8 -->|jump| B5
-    B9 -->|false| B10
-    B9 -->|true| B11
-    B10 -->|jump| B12
-    B11 -->|jump| B13
-    B12 -->|jump| B8
-    B13 -->|jump| B2
-    B14 -->|jump| B16
-    B15 -->|fallthrough| B16
+    B5 -->|fallthrough| B6
+    B6 -->|false| B7
+    B6 -->|true| B10
+    B7 -->|jump| B11
+    B8 -->|jump| B10
+    B9 -->|jump| B6
+    B10 -->|jump| B9
     </div>
   </div>
   <div class="grid">
     <div class="card">
       <h2>Three-Address Code (Quadruples)</h2>
-      <pre>0: if a > 0 goto 2
-1: goto 21
-2: if b < 10 goto 4
-3: goto 23
-4: i = 0
-5: if i < 5 goto 11
-6: goto 17
-7: goto 11
-8: t1 = i + 1
-9: i = t1
-10: goto 5
-11: if i == 2 goto 13
-12: goto 14
-13: goto 17
-14: t2 = x + i
-15: x = t2
-16: goto 8
-17: t3 = b + 1
-18: b = t3
-19: goto 2
-20: goto 23
-21: t4 = y - 1
-22: y = t4
-23: end
+      <pre>0: func_begin helper
+1: if a > 100 goto 3
+2: goto 4
+3: return a
+4: t1 = a * 2
+5: return t1
+6: func_end helper
+7: func_begin main
+8: x = 10
+9: y = 20
+10: total = 0
+11: i = 0
+12: if i < 5 goto 18
+13: goto 24
+14: goto 18
+15: t2 = i + 1
+16: i = t2
+17: goto 12
+18: x_s5 = 100
+19: t3 = total + x_s5
+20: total = t3
+21: t4 = total + x
+22: total = t4
+23: goto 15
+24: param total
+25: t5 = call helper, 1
+26: result = t5
+27: return result
+28: func_end main
+29: end
 </pre>
     </div>
     <div class="card">
       <h2>Basic Block Summary</h2>
       <table>
         <tr><th>Block</th><th>Quads</th><th>Reachable</th><th>Successors</th></tr>
-        <tr><td><b>B0</b></td><td>0..0</td><td style="color:#4ade80">YES</td><td>B1 (false) B2 (true) </td></tr>
-        <tr><td><b>B1</b></td><td>1..1</td><td style="color:#4ade80">YES</td><td>B15 (jump) </td></tr>
-        <tr><td><b>B2</b></td><td>2..2</td><td style="color:#4ade80">YES</td><td>B3 (false) B4 (true) </td></tr>
-        <tr><td><b>B3</b></td><td>3..3</td><td style="color:#4ade80">YES</td><td>B16 (jump) </td></tr>
-        <tr><td><b>B4</b></td><td>4..4</td><td style="color:#4ade80">YES</td><td>B5 (fallthrough) </td></tr>
-        <tr><td><b>B5</b></td><td>5..5</td><td style="color:#4ade80">YES</td><td>B6 (false) B9 (true) </td></tr>
-        <tr><td><b>B6</b></td><td>6..6</td><td style="color:#4ade80">YES</td><td>B13 (jump) </td></tr>
-        <tr><td><b>B7</b></td><td>7..7</td><td style="color:#f87171">NO</td><td>B9 (jump) </td></tr>
-        <tr><td><b>B8</b></td><td>8..10</td><td style="color:#4ade80">YES</td><td>B5 (jump) </td></tr>
-        <tr><td><b>B9</b></td><td>11..11</td><td style="color:#4ade80">YES</td><td>B10 (false) B11 (true) </td></tr>
-        <tr><td><b>B10</b></td><td>12..12</td><td style="color:#4ade80">YES</td><td>B12 (jump) </td></tr>
-        <tr><td><b>B11</b></td><td>13..13</td><td style="color:#4ade80">YES</td><td>B13 (jump) </td></tr>
-        <tr><td><b>B12</b></td><td>14..16</td><td style="color:#4ade80">YES</td><td>B8 (jump) </td></tr>
-        <tr><td><b>B13</b></td><td>17..19</td><td style="color:#4ade80">YES</td><td>B2 (jump) </td></tr>
-        <tr><td><b>B14</b></td><td>20..20</td><td style="color:#f87171">NO</td><td>B16 (jump) </td></tr>
-        <tr><td><b>B15</b></td><td>21..22</td><td style="color:#4ade80">YES</td><td>B16 (fallthrough) </td></tr>
-        <tr><td><b>B16</b></td><td>23..23</td><td style="color:#4ade80">YES</td><td><i>Exit</i></td></tr>
+        <tr><td><b>B0</b></td><td>0..1</td><td style="color:#4ade80">YES</td><td>B1 (false) B2 (true) </td></tr>
+        <tr><td><b>B1</b></td><td>2..2</td><td style="color:#4ade80">YES</td><td>B3 (jump) </td></tr>
+        <tr><td><b>B2</b></td><td>3..3</td><td style="color:#4ade80">YES</td><td><i>Exit</i></td></tr>
+        <tr><td><b>B3</b></td><td>4..5</td><td style="color:#4ade80">YES</td><td><i>Exit</i></td></tr>
+        <tr><td><b>B4</b></td><td>6..6</td><td style="color:#f87171">NO</td><td>B5 (fallthrough) </td></tr>
+        <tr><td><b>B5</b></td><td>7..11</td><td style="color:#4ade80">YES</td><td>B6 (fallthrough) </td></tr>
+        <tr><td><b>B6</b></td><td>12..12</td><td style="color:#4ade80">YES</td><td>B7 (false) B10 (true) </td></tr>
+        <tr><td><b>B7</b></td><td>13..13</td><td style="color:#4ade80">YES</td><td>B11 (jump) </td></tr>
+        <tr><td><b>B8</b></td><td>14..14</td><td style="color:#f87171">NO</td><td>B10 (jump) </td></tr>
+        <tr><td><b>B9</b></td><td>15..17</td><td style="color:#4ade80">YES</td><td>B6 (jump) </td></tr>
+        <tr><td><b>B10</b></td><td>18..23</td><td style="color:#4ade80">YES</td><td>B9 (jump) </td></tr>
+        <tr><td><b>B11</b></td><td>24..27</td><td style="color:#4ade80">YES</td><td><i>Exit</i></td></tr>
+        <tr><td><b>B12</b></td><td>28..29</td><td style="color:#f87171">NO</td><td><i>Exit</i></td></tr>
       </table>
     </div>
   </div>

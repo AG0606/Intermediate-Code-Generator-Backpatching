@@ -5,13 +5,25 @@
 #include "cfg.h"
 #include "optimizer.h"
 
+#ifdef _WIN32
+#include <direct.h>
+#define make_dir(p) _mkdir(p)
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#define make_dir(p) mkdir(p, 0755)
+#endif
+
+void ensure_output_dir(void) {
+    make_dir("output");
+}
+
 extern int yyparse(void);
 extern FILE *yyin;
 
 static void print_banner(void) {
     printf("=========================================================================\n");
     printf("     INTERMEDIATE CODE GENERATOR FOR CONTROL-FLOW STATEMENTS (ICG)      \n");
-    printf("           Compiler Design Project - Review 2 (100%% Implementation)      \n");
     printf("=========================================================================\n");
 }
 
@@ -25,7 +37,7 @@ static void print_usage(const char *progname) {
     printf("  --quads          Display the quadruple table\n");
     printf("  --trace          Enable detailed trace of emit and backpatching steps\n");
     printf("  --strict         Enable strict semantic checking (reject undeclared vars)\n");
-    printf("  --json           Export quadruples to quads.json\n");
+    printf("  --json           Export quadruples to output/quads.json\n");
     printf("  -h, --help       Display this help message\n\n");
     printf("If no input file is specified, input is read from standard input.\n");
     printf("Example:\n");
@@ -138,6 +150,7 @@ int main(int argc, char **argv) {
 
     /* CFG Generation (before optimization or standalone) */
     if (opt_cfg) {
+        ensure_output_dir();
         cfg_build();
         cfg_print_blocks(stdout);
         cfg_export_dot(output_cfg_dot);
@@ -158,17 +171,19 @@ int main(int argc, char **argv) {
         printf("=========================================================================\n");
 
         if (opt_cfg) {
+            ensure_output_dir();
             cfg_build();
-            cfg_export_dot("cfg_optimized.dot");
-            cfg_export_html("cfg_optimized.html", "Optimized CFG");
-            printf("[CFG] Exported Optimized CFG to 'cfg_optimized.dot' and 'cfg_optimized.html'\n");
+            cfg_export_dot(output_cfg_opt_dot);
+            cfg_export_html(output_cfg_opt_html, "Optimized CFG");
+            printf("[CFG] Exported Optimized CFG to '%s' and '%s'\n", output_cfg_opt_dot, output_cfg_opt_html);
         }
     }
 
     /* JSON export */
     if (opt_json) {
-        export_quads_json("quads.json");
-        printf("[JSON] Exported quadruples to 'quads.json'\n");
+        ensure_output_dir();
+        export_quads_json(output_quads_json);
+        printf("[JSON] Exported quadruples to '%s'\n", output_quads_json);
     }
 
     if (opt_all) {
