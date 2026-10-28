@@ -40,10 +40,7 @@ make
 # 4. Run the automated 14-benchmark test suite
 make test
 
-# 5. (Optional) Recompile the 6-page IEEE paper PDF
-make paper
-
-# 6. Clean build artifacts
+# 5. Clean build artifacts
 make clean
 ```
 

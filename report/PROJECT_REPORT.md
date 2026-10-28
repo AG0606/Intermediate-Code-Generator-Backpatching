@@ -310,9 +310,6 @@ make test
 
 # Clean all generated build artifacts
 make clean
-
-# Compile the 6-page IEEE conference paper (requires pdflatex)
-make paper
 ```
 
 ### 8.3 Command-Line Options

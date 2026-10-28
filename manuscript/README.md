@@ -29,10 +29,7 @@ This directory contains the formal IEEE conference paper draft for the project, 
 To compile the LaTeX source into PDF on any system with a standard TeX Live / MiKTeX distribution:
 
 ```bash
-# From the repository root:
-make paper
-
-# Or directly from this directory:
+# Directly from this directory:
 pdflatex -interaction=nonstopmode IEEE_Paper_Draft.tex
 pdflatex -interaction=nonstopmode IEEE_Paper_Draft.tex
 ```
