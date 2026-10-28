@@ -193,7 +193,7 @@ The verification harness (`tests/run_tests.py`) runs 14 end-to-end benchmarks co
 | **4** | `test4_for_loop.txt` | Dual-marker `for` loop with `break`/`continue` | 0 | **PASS** ✅ |
 | **5** | `test5_do_while.txt` | Post-test `do-while` backpatching | 0 | **PASS** ✅ |
 | **6** | `test6_switch_case.txt` | `switch-case` dispatch with fallthrough | 0 | **PASS** ✅ |
-| **7** | `test7_complex_boolean.txt` | Mixed complex Boolean expressions (`&&`, `||`, `!`) | 0 | **PASS** ✅ |
+| **7** | `test7_complex_boolean.txt` | Mixed complex Boolean expressions (`&& , \|\| , !`) | 0 | **PASS** ✅ |
 | **8** | `test8_deep_nesting.txt` | Deeply nested control structures (6+ levels) | 0 | **PASS** ✅ |
 | **9** | `test9_declarations_types.txt` | Scoped declarations and type checking | 0 | **PASS** ✅ |
 | **10** | `test10_semantic_errors.txt` | Semantic diagnostic error detection | 1 | **PASS** ✅ |
