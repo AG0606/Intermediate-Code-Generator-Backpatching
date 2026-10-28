@@ -35,7 +35,7 @@ cd Intermediate-Code-Generator-Backpatching
 make
 
 # 3. Run the compiler on any input program
-./icg tests/test1_if_else.txt
+./icg tests/test13_c_program_scopes.txt --all
 
 # 4. Run the automated 14-benchmark test suite
 make test
@@ -69,8 +69,8 @@ The `icg` executable supports versatile output modes:
 
 ### Example Compilation Commands
 ```bash
-# Compile an if-else statement and view formatted 3AC quadruples
-./icg --quads tests/test1_if_else.txt
+# Complete audit with all intermediate outputs (SymTab, Quads, CFG, Optimization)
+./icg tests/test13_c_program_scopes.txt --all
 
 # Compile a nested loop with functions and generate interactive CFG visualizations
 ./icg --cfg tests/test4_for_loop.txt
@@ -78,8 +78,8 @@ The `icg` executable supports versatile output modes:
 # Run the 4-pass optimizer and view code-size reduction
 ./icg -O tests/test12_optimization.txt
 
-# Complete audit with all intermediate outputs
-./icg --all tests/test13_c_program_scopes.txt
+# Inspect symbol table and variable scopes
+./icg --symtab tests/test13_c_program_scopes.txt
 ```
 
 ---
@@ -92,7 +92,8 @@ The `icg` executable supports versatile output modes:
 | 📝 **Paper Source** | [`manuscript/IEEE_Paper_Draft.tex`](manuscript/IEEE_Paper_Draft.tex) | **LaTeX** | Full LaTeX source with 15 peer-reviewed citations and TikZ architectural figures. |
 | 📊 **Presentation** | [`presentation/Final_PDF_PPT_CD.pdf`](presentation/Final_PDF_PPT_CD.pdf) | **PDF** (23 Slides) | Definitive comprehensive final presentation slide deck. |
 | 🖥️ **Presentation Source** | [`presentation/Final_PDF_PPT_CD.pptx`](presentation/Final_PDF_PPT_CD.pptx) | **PPTX** (23 Slides) | Matching PowerPoint presentation source. |
-| 📑 **Technical Report** | [`report/PROJECT_REPORT.md`](report/PROJECT_REPORT.md) | **Markdown** | Comprehensive engineering project report covering theory, design, data structures, and evaluations. |
+| 📑 **Technical Report** | [`report/PROJECT_REPORT.pdf`](report/PROJECT_REPORT.pdf) | **PDF** (10 Pages) | Formatted 10-page engineering project report covering theory, design, data structures, and evaluations. |
+| 📝 **Report Source** | [`report/PROJECT_REPORT.md`](report/PROJECT_REPORT.md) | **Markdown** | Markdown source version of the technical report. |
 | 💻 **Compiler Source** | [`src/`](src/) | **C / Lex / Yacc** | Complete ANSI C compiler implementation (Flex lexer, Bison parser, CFG, optimizer). |
 | 🧪 **Test Suite** | [`tests/`](tests/) | **14 Benchmarks** | Automated Python test runner and 14 comprehensive test input programs. |
 | 🌐 **Visual CFGs** | [`output/`](output/) | **DOT & HTML** | Sample interactive Mermaid.js and Graphviz Control Flow Graphs (raw & optimized). |
@@ -173,6 +174,7 @@ Intermediate-Code-Generator-Backpatching/
 │   └── README.md                 # Presentation overview and slide index
 │
 ├── report/                       # Formal Engineering Project Report
+│   ├── PROJECT_REPORT.pdf        # Formatted 10-page engineering project report (PDF)
 │   └── PROJECT_REPORT.md         # Comprehensive technical report (Theory, Code, Results)
 │
 ├── output/                       # Sample Generated Outputs & Visualizations
