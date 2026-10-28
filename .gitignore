@@ -1,12 +1,13 @@
-# Compiled binaries and objects
+# Compiled binaries and build objects
 icg
 icg.exe
+bin/
 *.o
 *.obj
 *.exe
 *.out
 
-# Flex and Bison generated files
+# Flex and Bison generated intermediate C files
 src/lex.yy.c
 src/parser.tab.c
 src/parser.tab.h
@@ -18,26 +19,27 @@ parser.tab.h
 y.tab.c
 y.tab.h
 
-# Excluded scripts, presentations, reports, and assets
-backup_assets/
-*.bat
-*.ps1
-*.pdf
-*.pptx
-*.html
-*.dot
-*.json
-*.png
-update_*.py
-create_*.py
-build_*.py
-PROGRESS_REPORT.*
-PROJECT_REPORT.*
+# LaTeX auxiliary build files (keeps final .pdf intact)
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.fls
+*.fdb_latexmk
 
-# Python cache
+# Generated runtime compiler output files in root
+quads.json
+/cfg.dot
+/cfg.html
+/cfg_optimized.dot
+/cfg_optimized.html
+
+# Python bytecode and caches
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
-# OS files
+# OS-specific files
 .DS_Store
 Thumbs.db

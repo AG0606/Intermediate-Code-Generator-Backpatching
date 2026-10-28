@@ -7,6 +7,8 @@ SRCS = src/y.tab.c src/lex.yy.c src/quad.c src/symbol_table.c src/loop_stack.c s
 OBJS = $(SRCS:.c=.o)
 TARGET = icg
 
+.PHONY: all test clean paper help
+
 all: $(TARGET)
 
 $(TARGET): src/y.tab.c src/lex.yy.c $(SRCS)
@@ -19,7 +21,19 @@ src/lex.yy.c: src/lexer.l src/y.tab.h
 	$(LEX) -o src/lex.yy.c src/lexer.l
 
 test: $(TARGET)
-	python3 run_tests.py
+	python3 tests/run_tests.py
+
+paper:
+	cd manuscript && pdflatex -interaction=nonstopmode IEEE_Paper_Draft.tex && pdflatex -interaction=nonstopmode IEEE_Paper_Draft.tex
+	rm -f manuscript/*.aux manuscript/*.log manuscript/*.out
 
 clean:
-	rm -f $(TARGET) src/lex.yy.c src/y.tab.c src/y.tab.h src/*.o *.dot *.html quads.json
+	rm -f $(TARGET) $(TARGET).exe src/lex.yy.c src/y.tab.c src/y.tab.h src/*.o *.dot *.html quads.json manuscript/*.aux manuscript/*.log manuscript/*.out
+
+help:
+	@echo "Available Makefile targets:"
+	@echo "  make        - Build the Intermediate Code Generator (icg binary)"
+	@echo "  make test   - Run the full 14-benchmark automated verification suite"
+	@echo "  make paper  - Recompile the 6-page IEEE conference manuscript (pdflatex)"
+	@echo "  make clean  - Remove all compiled binaries and intermediate build files"
+	@echo "  make help   - Display this help message"

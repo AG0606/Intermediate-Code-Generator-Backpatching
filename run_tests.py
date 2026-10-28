@@ -166,7 +166,14 @@ TESTS = [
 ]
 
 def run_tests():
-    binary = "./icg"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    if os.path.basename(script_dir) == "tests":
+        repo_root = os.path.dirname(script_dir)
+    else:
+        repo_root = script_dir
+
+    binary = os.path.join(repo_root, "icg.exe") if (sys.platform == "win32" and os.path.exists(os.path.join(repo_root, "icg.exe"))) else os.path.join(repo_root, "icg")
+    
     if not os.path.exists(binary):
         print(f"{RED}Error: {binary} does not exist. Run 'make' first.{RESET}")
         sys.exit(1)
@@ -179,11 +186,11 @@ def run_tests():
     total = len(TESTS)
 
     for i, test in enumerate(TESTS, 1):
-        test_file = test["file"]
+        test_file = os.path.join(repo_root, test["file"])
         cmd = [binary, test_file] + test.get("args", [])
         expected_exit = test.get("expected_exit_code", 0)
 
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=repo_root)
         combined_output = res.stdout + "\n" + res.stderr
 
         all_matched = True
